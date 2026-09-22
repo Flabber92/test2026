@@ -541,12 +541,13 @@
     door: "door", entrance: "door", gate: "door",
     window: "window", glass: "window",
     moth: "moth", insect: "moth",
-    inscription: "inscription", carving: "inscription",
+    inscription: "inscription", carving: "inscription", carved: "inscription",
     saw: "saw", observed: "saw", witnessed: "saw",
     lied: "lied", concealed: "lied", deceived: "lied",
     entered: "entered", "came in": "entered",
     left: "left", departed: "left", exited: "left",
-    last: "last", final: "last"
+    last: "last", final: "last",
+    here: "here", "was here": "here"
   };
 
   function extractConcepts(raw) {
@@ -634,6 +635,7 @@
             ? EPOCH_DRIFT_TEXT.moth
             : "A moth lies on the sill, wings closed, dead since morning.";
         }, status: "OBSERVED" },
+      { text: "A physician is expected, though the hour is not fixed. Something has been carved into the door frame.", status: "OBSERVED" },
       { text: "Someone was in this room before you arrived. The record does not yet say who.",
         status: retroactiveOrUnresolved }
     ],
@@ -662,15 +664,17 @@
   function parseProposition(raw, record) {
     var concepts = extractConcepts(raw);
 
+    // "door" is corroborating detail, not a requirement: a player will
+    // far more often say "the physician was here" than "the physician
+    // entered through the door", and both name the same claim.
     var mentionsPosition = concepts.indexOf("entered") !== -1 ||
-      concepts.indexOf("left") !== -1 || concepts.indexOf("last") !== -1;
-    var claimsPhysicianDoor = concepts.indexOf("physician") !== -1 &&
-      concepts.indexOf("door") !== -1 && mentionsPosition;
-    var claimsVisitorDoor = concepts.indexOf("visitor") !== -1 &&
-      concepts.indexOf("door") !== -1 && mentionsPosition;
+      concepts.indexOf("left") !== -1 || concepts.indexOf("last") !== -1 ||
+      concepts.indexOf("here") !== -1;
+    var claimsPhysicianPosition = concepts.indexOf("physician") !== -1 && mentionsPosition;
+    var claimsVisitorPosition = concepts.indexOf("visitor") !== -1 && mentionsPosition;
 
-    if (claimsPhysicianDoor || claimsVisitorDoor) {
-      var claim = claimsPhysicianDoor ? "physician" : "visitor";
+    if (claimsPhysicianPosition || claimsVisitorPosition) {
+      var claim = claimsPhysicianPosition ? "physician" : "visitor";
       if (record.last_in_room === "unresolved") {
         // A first-person claim of having witnessed it directly is a
         // stronger, *active* clash with the record than merely asking
@@ -680,6 +684,13 @@
       }
       var verdict2 = (claim === record.last_in_room) ? "STIPULATED" : "OVERRULED";
       return { verdict: verdict2, concepts: concepts, sideEffects: {} };
+    }
+
+    // A position word with no named suspect ("who was here last?") is a
+    // question, not a proposition — the record holds the answer but
+    // this exhibit didn't name anyone to test it against.
+    if (mentionsPosition) {
+      return { verdict: "REDACTED", concepts: concepts, sideEffects: {} };
     }
 
     if (concepts.indexOf("physician") !== -1 && concepts.indexOf("lied") !== -1) {
@@ -698,6 +709,9 @@
       };
     }
 
+    if (concepts.indexOf("physician") !== -1) {
+      return { verdict: "STIPULATED", concepts: concepts, sideEffects: { physician_asked: true } };
+    }
     if (concepts.indexOf("window") !== -1) {
       return { verdict: "STIPULATED", concepts: concepts, sideEffects: { window_examined: true } };
     }
@@ -718,12 +732,13 @@
    * Theory templates (2-3 authored), for last_in_room only.
    * ----------------------------------------------------------------- */
   function parseTheory(raw) {
+    // The theory box is already labeled "who was last in this room" —
+    // requiring a position word here too just rejects correct answers
+    // for missing a redundant keyword. Naming a suspect is the theory.
     var concepts = extractConcepts(raw);
-    var mentionsPosition = concepts.indexOf("entered") !== -1 ||
-      concepts.indexOf("left") !== -1 || concepts.indexOf("last") !== -1;
     if (concepts.indexOf("nobody") !== -1) return "nobody";
-    if (concepts.indexOf("physician") !== -1 && mentionsPosition) return "physician";
-    if (concepts.indexOf("visitor") !== -1 && mentionsPosition) return "visitor";
+    if (concepts.indexOf("physician") !== -1) return "physician";
+    if (concepts.indexOf("visitor") !== -1) return "visitor";
     return null;
   }
 
@@ -735,6 +750,7 @@
       depth: 0,
       coherence: 100,
       trust_physician: null,
+      physician_asked: false,
       window_examined: false,
       moth_examined: false,
       inscription_read: false,
@@ -825,17 +841,32 @@
     return "<p>" + out + "</p>";
   }
 
+  // Depth-gated reveal (docs/01, "Depth" + "absence as an asset"): the
+  // room's teaser sentence names the physician and the inscription so
+  // the player has the words to ask about them, but the elaborated
+  // sections only render once actually asked/examined — first render
+  // is the room alone. Nothing here is "locked" or announced; a
+  // section simply isn't present until its flag is true.
   function renderScene() {
     var el = document.getElementById("scene");
-    var physicianSentences = SCENE.physician.slice();
-    if (impression.has_seen_death_reading) {
-      physicianSentences.push({ text: PHYSICIAN_DEATH_READING_LINE, status: "INFERRED" });
-    }
     var html = "";
     html += '<h3>The room</h3>' + paragraphHtml(SCENE.room, record);
-    html += '<h3>The physician</h3>' + paragraphHtml(physicianSentences, record);
-    html += '<h3>The inscription</h3>' + paragraphHtml(SCENE.inscription, record);
-    html += '<h3>A fragment</h3>' + paragraphHtml(SCENE.memory, record);
+
+    if (record.physician_asked) {
+      var physicianSentences = SCENE.physician.slice();
+      if (impression.has_seen_death_reading) {
+        physicianSentences.push({ text: PHYSICIAN_DEATH_READING_LINE, status: "INFERRED" });
+      }
+      html += '<h3>The physician</h3>' + paragraphHtml(physicianSentences, record);
+    }
+    if (record.inscription_read) {
+      html += '<h3>The inscription</h3>' + paragraphHtml(SCENE.inscription, record);
+    }
+    var askedCount = (record.window_examined ? 1 : 0) + (record.moth_examined ? 1 : 0) +
+      (record.inscription_read ? 1 : 0) + (record.physician_asked ? 1 : 0);
+    if (askedCount >= 2) {
+      html += '<h3>A fragment</h3>' + paragraphHtml(SCENE.memory, record);
+    }
     el.innerHTML = html;
   }
 
@@ -905,12 +936,14 @@
   }
 
   function recomputeDepth() {
-    var count = (record.window_examined ? 1 : 0) + (record.moth_examined ? 1 : 0) + (record.inscription_read ? 1 : 0);
+    var count = (record.window_examined ? 1 : 0) + (record.moth_examined ? 1 : 0) +
+      (record.inscription_read ? 1 : 0) + (record.physician_asked ? 1 : 0);
     record.depth = Math.min(3, count);
   }
 
   function applySideEffects(effects) {
     if (!effects) return;
+    if (Object.prototype.hasOwnProperty.call(effects, "physician_asked")) record.physician_asked = effects.physician_asked;
     if (Object.prototype.hasOwnProperty.call(effects, "window_examined")) record.window_examined = effects.window_examined;
     if (Object.prototype.hasOwnProperty.call(effects, "moth_examined")) record.moth_examined = effects.moth_examined;
     if (Object.prototype.hasOwnProperty.call(effects, "inscription_read")) record.inscription_read = effects.inscription_read;

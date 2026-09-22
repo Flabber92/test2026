@@ -144,3 +144,29 @@ this is a text/CSS prototype.
 
 No combat, no inventory, no multiple rooms, no dice mechanic, no
 save-file export/import, no sound. Those are later milestones.
+
+## Addendum: progressive reveal + broadened parser (post-playtest fix)
+
+A first headless playtest (naive phrasing, not reverse-engineered from
+source) showed two real problems: the initial render dumped all 4
+sections (~163 words) before any player action, and several entirely
+on-topic natural attempts — including "who was in the room last?" and
+a *correct* theory ("I think it was the visitor") — returned CANNOT
+BE ESTABLISHED purely for missing an unstated required keyword (the
+theory parser required a redundant position word; the proposition
+parser required the literal word "door").
+
+Fix applied: the room's teaser sentence now names the physician and
+the inscription so the player has words to ask about, but "The
+physician" / "The inscription" / "A fragment" sections only render
+once the corresponding flag is set (`physician_asked`,
+`inscription_read`, two-of-four asked for the memory fragment) —
+first render is the room alone (~73 words). The "door" requirement was
+dropped from the position-claim template (a player says "the
+physician was here" far more often than "...entered through the
+door"); a bare position word with no named suspect now returns
+REDACTED instead of CANNOT (a question isn't a proposition, but the
+machine still engages); and the theory parser no longer requires a
+position word, since the theory box already frames the question. A
+re-run of the same naive playtest afterward hit zero CANNOT responses
+across 7 attempts, with sections unlocking visibly as each one landed.
