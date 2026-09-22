@@ -59,6 +59,15 @@
   .gl-UNRESOLVED  { border-bottom: none; color: var(--ink-dim); }
   .gl-RETROACTIVE { border-bottom: 3px double #9a86c9; color: #9a86c9; }
   .flicker { animation: flicker 2.6s ease-in-out infinite; }
+  /* Coherence <= 50 (the same band obstacleGlyph already reports as
+   * "x*" or worse) becomes a felt effect, not just a digit: a slow,
+   * subtle widen/tighten on the output line. Real cause every time:
+   * this class only toggles from the coherence band, nothing else. */
+  .device.strained #output { animation: strain 3.2s ease-in-out infinite; }
+  @keyframes strain {
+    0%, 100% { letter-spacing: 0.02em; }
+    50% { letter-spacing: 0.09em; }
+  }
   @keyframes flicker {
     0%, 100% { opacity: 1; } 50% { opacity: 0.45; }
     52% { opacity: 1; } 54% { opacity: 0.6; } 56% { opacity: 1; }
@@ -302,6 +311,12 @@
 
   var MYSTERY_TEXT = "SOMEONE WAS HERE BEFORE YOU ARRIVED.";
   var MEMORY_TEXT = "A MEMORY SURFACES: A CHAIR, A DOOR. NOT YOURS.";
+  // Resolving who was last in the room is not the end of the record:
+  // the machine opens exactly one further, unresolved thread once you
+  // ask it anything else afterward. Fires once per session, never on
+  // the same turn that did the collapsing (that turn's own verdict
+  // needs to be seen clean).
+  var FOLLOWUP_TEXT = "WHO WAS THE PATIENT? THE RECORD DOES NOT SAY.";
 
   // A blind first attempt has nothing to go on but the mystery line:
   // no noun in it is examinable, so an unguided player has no way to
@@ -332,6 +347,8 @@
       table_examined: false,
       last_in_room: "unresolved",
       memory_surfaced: false,
+      followup_surfaced: false,
+      just_collapsed: false,
       nudge_index: 0,
       recalibrated_used: false,
       retroactive_flicker_locked: false,
@@ -389,6 +406,7 @@
   function renderCode() {
     document.getElementById("code").textContent =
       originGlyph(depthOf(record)) + " " + obstacleGlyph(record.coherence) + " " + outcomeGlyph(record.last_in_room);
+    document.querySelector(".device").classList.toggle("strained", record.coherence <= 50);
   }
   // status: an epistemic status (content line) or a bare verdict word (no glyph).
   function showLine(text, status) {
@@ -428,10 +446,17 @@
     // A claim naming a suspect and a position: this is what forces the
     // record to decide who was last in the room, the first time it
     // happens. Later assertions just test against what was decided.
+    // A claim made before asking about anything (askedCount < 2, the
+    // same threshold the memory fragment uses) is refused outright:
+    // the record won't commit on a blind guess, so accusing first and
+    // looking later stops being the winning move.
     if (namesSuspect && mentionsPosition) {
-      var claim = concepts.indexOf("physician") !== -1 ? "physician" : "visitor";
       var wasUnresolved = record.last_in_room === "unresolved";
-      if (wasUnresolved) record.last_in_room = collapseLastInRoom(record);
+      if (wasUnresolved && askedCount(record) < 2) {
+        return { line: "REDACTED. NOT ENOUGH IS ESTABLISHED YET.", verdict: "REDACTED" };
+      }
+      var claim = concepts.indexOf("physician") !== -1 ? "physician" : "visitor";
+      if (wasUnresolved) { record.last_in_room = collapseLastInRoom(record); record.just_collapsed = true; }
       var matches = claim === record.last_in_room;
       return { line: matches ? (wasUnresolved ? "SUSTAINED." : "STIPULATED.") : "OVERRULED.", verdict: matches ? (wasUnresolved ? "SUSTAINED" : "STIPULATED") : "OVERRULED" };
     }
@@ -448,7 +473,9 @@
       if (record.trust_physician === null) {
         var full = record.window_examined && record.moth_examined && record.inscription_stage > 0;
         record.trust_physician = !full;
-        return { line: full ? "SUSTAINED." : "OVERRULED.", verdict: full ? "SUSTAINED" : "OVERRULED" };
+        return full
+          ? { line: "SUSTAINED.", verdict: "SUSTAINED" }
+          : { line: "OVERRULED. THE INSCRIPTION WAS NEVER READ.", verdict: "OVERRULED" };
       }
       var ok = record.trust_physician === false;
       return { line: ok ? "STIPULATED." : "OVERRULED.", verdict: ok ? "STIPULATED" : "OVERRULED" };
@@ -490,6 +517,8 @@
 
   function handleSubmit(raw) {
     var beforeCount = askedCount(record);
+    var wasResolvedBefore = record.last_in_room !== "unresolved";
+    record.just_collapsed = false;
     var result = consult(raw);
     if (result.verdict) applyDelta(result.verdict);
     var afterCount = askedCount(record);
@@ -498,6 +527,15 @@
     if (!record.memory_surfaced && beforeCount < 2 && afterCount >= 2) {
       record.memory_surfaced = true;
       showLine(MEMORY_TEXT, retroactiveOrUnresolved(record));
+    } else if (!record.followup_surfaced && wasResolvedBefore && !record.just_collapsed && result.line !== MYSTERY_TEXT) {
+      // The mystery was already resolved entering this turn (so this
+      // isn't the turn that resolved it, that verdict needs to be
+      // seen clean) and this isn't a recall of the mystery itself
+      // (the retroactive glyph flip there is the whole point and
+      // must never be preempted): open the one further thread
+      // instead of going quiet now that the room's question is answered.
+      record.followup_surfaced = true;
+      showLine(FOLLOWUP_TEXT, "UNRESOLVED");
     } else if (result.status) {
       showLine(result.line, result.status);
     } else {
