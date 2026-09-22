@@ -208,3 +208,24 @@ screen, just knobs, gears, rotating cylinders for text"). Rebuilt to:
   and the Lone Wolf-style RPG framing surfaced in project history are
   explicitly out of scope; see AGENTS.md rules 11-12. Web/phone
   browser only.
+
+## Addendum 3: discoverability fix (blind playtest)
+
+A blind playtest (naive first-attempt phrasing, no prior knowledge of
+the dictionary) hit CANNOT BE ESTABLISHED on 7 of 10 tries. Root
+cause: stripping the opening screen down to one line also removed
+every clue about which nouns the machine recognizes; a first-time
+player has no way to guess "moth" or "inscription" specifically.
+Fixed without restoring a paragraph dump: the first two times in a
+session that nothing is recognized, the machine offers one of two
+fixed, bounded orientation lines instead of a flat rejection (naming
+window/moth, then physician/inscription), carrying no glyph and no
+coherence cost since it isn't a verdict, it's the machine changing the
+subject. Only after both are spent does an unrecognized input get the
+honest CANNOT verdict. Also restored "table"/"cups" and "door" as
+recognized nouns (door was dropped as a requirement in Addendum 2 but
+should have stayed as a synonym for the inscription). Re-running the
+same 10 blind attempts afterward: the two nudges land, "check the
+table" and "check the door" now resolve directly, and only genuinely
+out-of-scope asks ("who are you", "help") still fall through to
+CANNOT, honestly.

@@ -221,9 +221,11 @@
     physician: "physician", doctor: "physician", surgeon: "physician",
     visitor: "visitor", stranger: "visitor",
     nobody: "nobody", "no one": "nobody", empty: "nobody",
+    table: "table", cups: "table", cup: "table",
     window: "window", glass: "window",
-    moth: "moth", insect: "moth",
+    moth: "moth", insect: "moth", bug: "moth",
     inscription: "inscription", carving: "inscription", carved: "inscription",
+    door: "inscription", frame: "inscription",
     lied: "lied", concealed: "lied", deceived: "lied",
     entered: "entered", "came in": "entered",
     left: "left", departed: "left", exited: "left",
@@ -280,6 +282,7 @@
    * paragraph. Physician and inscription reveal in sequence as asked;
    * everything else is one-shot.
    * =============================================================== */
+  var TABLE_LINE = { text: "TWO CUPS ON THE TABLE. ONLY ONE SHOWS USE.", status: "OBSERVED" };
   var WINDOW_LINE = { text: "THE WINDOW IS SHUT. THE LATCH IS WHOLE.", status: "OBSERVED" };
   var MOTH_LINE = { text: "A MOTH ON THE SILL. DEAD SINCE MORNING.", status: "OBSERVED" };
   var MOTH_LINE_DRIFT = { text: "SOMETHING DRY ON THE SILL. LONG DEAD.", status: "OBSERVED" };
@@ -300,6 +303,20 @@
   var MYSTERY_TEXT = "SOMEONE WAS HERE BEFORE YOU ARRIVED.";
   var MEMORY_TEXT = "A MEMORY SURFACES: A CHAIR, A DOOR. NOT YET YOURS.";
 
+  // A blind first attempt has nothing to go on but the mystery line:
+  // no noun in it is examinable, so an unguided player has no way to
+  // know "window" or "moth" or "inscription" are the words that work.
+  // Rather than answer the first few unrecognized inputs with a flat
+  // rejection, the machine offers one of these instead, bounded and
+  // fixed (never random, never repeats within a session): it is
+  // changing the subject, not confirming or examining anything, so it
+  // carries no glyph and costs no coherence. Once exhausted, an
+  // unrecognized input gets the honest CANNOT verdict.
+  var NUDGE_LINES = [
+    "A WINDOW. A MOTH DEAD ON THE SILL.",
+    "A PHYSICIAN IS EXPECTED. SOMETHING IS CARVED BY THE DOOR."
+  ];
+
   /* =================================================================
    * RECORD (resets on New Session) / IMPRESSION (persists via
    * localStorage, never reset by the app)
@@ -312,8 +329,10 @@
       inscription_stage: 0,
       window_examined: false,
       moth_examined: false,
+      table_examined: false,
       last_in_room: "unresolved",
       memory_surfaced: false,
+      nudge_index: 0,
       recalibrated_used: false,
       retroactive_flicker_locked: false,
       session_start_ms: Date.now(),
@@ -443,6 +462,10 @@
     if (concepts.indexOf("visitor") !== -1) {
       return { line: "REDACTED.", verdict: "REDACTED" }; // real, but nothing here reveals them directly
     }
+    if (concepts.indexOf("table") !== -1) {
+      record.table_examined = true;
+      return { line: TABLE_LINE.text, status: TABLE_LINE.status };
+    }
     if (concepts.indexOf("window") !== -1) {
       record.window_examined = true;
       return { line: WINDOW_LINE.text, status: WINDOW_LINE.status };
@@ -456,6 +479,11 @@
       var il = INSCRIPTION_LINES[Math.min(record.inscription_stage, INSCRIPTION_LINES.length - 1)];
       record.inscription_stage = Math.min(record.inscription_stage + 1, INSCRIPTION_LINES.length);
       return { line: il.text, status: il.status };
+    }
+    if (record.nudge_index < NUDGE_LINES.length) {
+      var nudge = NUDGE_LINES[record.nudge_index];
+      record.nudge_index += 1;
+      return { line: nudge, verdict: null };
     }
     return { line: "CANNOT BE ESTABLISHED.", verdict: "CANNOT" };
   }
