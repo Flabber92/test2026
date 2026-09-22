@@ -290,18 +290,18 @@
   var PHYSICIAN_LINES = [
     { text: "A PHYSICIAN IS EXPECTED. THE HOUR IS NOT FIXED.", status: "REPORTED" },
     { text: "HE ARRIVES AT INTERVALS THAT ARE NOT REGULAR.", status: "REPORTED" },
-    { text: "HE SPEAKS OF THE PATIENT IN PAST TENSE, THEN STOPS.", status: "INFERRED" }
+    { text: "HE NAMES THE PATIENT, PAST TENSE, THEN STOPS.", status: "INFERRED" }
   ];
-  var PHYSICIAN_DEATH_LINE = { text: "YOU HAVE HEARD THAT STOP BEFORE, IN A RECORD YOU LACK NOW.", status: "INFERRED" };
+  var PHYSICIAN_DEATH_LINE = { text: "YOU HEARD THAT STOP BEFORE. RECORD LOST.", status: "INFERRED" };
 
   var INSCRIPTION_LINES = [
     { text: "SOMETHING IS CARVED INTO THE DOOR FRAME.", status: "OBSERVED" },
-    { text: "NOT HIS HAND: THE ROOM REMEMBERS WHAT YOU FORGET.", status: "OBSERVED" },
-    { text: "SMALLER, LATER, BENEATH IT: OR FORGETS WHAT YOU REMEMBER.", status: "INFERRED" }
+    { text: "NOT HIS HAND: ROOM REMEMBERS WHAT YOU FORGET.", status: "OBSERVED" },
+    { text: "BENEATH, SMALLER: OR FORGETS WHAT YOU REMEMBER.", status: "INFERRED" }
   ];
 
   var MYSTERY_TEXT = "SOMEONE WAS HERE BEFORE YOU ARRIVED.";
-  var MEMORY_TEXT = "A MEMORY SURFACES: A CHAIR, A DOOR. NOT YET YOURS.";
+  var MEMORY_TEXT = "A MEMORY SURFACES: A CHAIR, A DOOR. NOT YOURS.";
 
   // A blind first attempt has nothing to go on but the mystery line:
   // no noun in it is examinable, so an unguided player has no way to
@@ -314,7 +314,7 @@
   // unrecognized input gets the honest CANNOT verdict.
   var NUDGE_LINES = [
     "A WINDOW. A MOTH DEAD ON THE SILL.",
-    "A PHYSICIAN IS EXPECTED. SOMETHING IS CARVED BY THE DOOR."
+    "A PHYSICIAN IS EXPECTED. SOMETHING IS CARVED."
   ];
 
   /* =================================================================

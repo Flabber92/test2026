@@ -35,3 +35,8 @@ touching runtime code. These are laws, not suggestions:
     combat, no world map, no stat/loot trees). That survey was
     background context, not a design target. The machine philosophy
     in docs/01 is the actual spec.
+13. 48 characters is a hard cap, not a target, and it applies to
+    every player-visible machine output line just as much as to the
+    input field. Before pushing any change to authored text, check
+    every string constant's length programmatically (grep/node), not
+    by eye: eyeballed lines have already shipped over budget twice.
