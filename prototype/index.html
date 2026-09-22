@@ -239,7 +239,8 @@
     entered: "entered", "came in": "entered",
     left: "left", departed: "left", exited: "left",
     last: "last", final: "last",
-    here: "here", "was here": "here"
+    here: "here", "was here": "here",
+    not: "negation", never: "negation", wasn: "negation", didn: "negation"
   };
   function extractConcepts(raw) {
     var text = String(raw || "").toLowerCase();
@@ -392,6 +393,12 @@
     record.epoch_drift = (priorActive !== null) && ((now - priorActive) > DEMO_EPOCH_DRIFT_MS);
     impression.last_active_at = now;
     saveImpression(impression);
+    // The button's disabled attribute is DOM state, not record state:
+    // freshRecord() resets recalibrated_used, but without this the
+    // button stays disabled forever after first use, contradicting
+    // the legend's "once per session" (found by adversarial replay).
+    var recalBtn = document.getElementById("recalibrate-btn");
+    if (recalBtn) recalBtn.disabled = false;
     renderCode();
     showLine(MYSTERY_TEXT, retroactiveOrUnresolved(record));
   }
@@ -442,6 +449,17 @@
     var mentionsPosition = concepts.indexOf("entered") !== -1 || concepts.indexOf("left") !== -1 ||
       concepts.indexOf("last") !== -1 || concepts.indexOf("here") !== -1;
     var namesSuspect = concepts.indexOf("physician") !== -1 || concepts.indexOf("visitor") !== -1;
+    var namesBothSuspects = concepts.indexOf("physician") !== -1 && concepts.indexOf("visitor") !== -1;
+    var isNegated = concepts.indexOf("negation") !== -1;
+    // A question is never a claim: the record does not let asking
+    // (even "so who was it, X or Y?") commit it. Checked two ways
+    // because the 48-char cap truncates from the end, so a long
+    // question can lose its own trailing "?" right when this guard
+    // matters most (found by an adversarial pass); a leading
+    // interrogative word survives truncation instead.
+    var rawText = String(raw || "");
+    var isQuestion = /\?\s*$/.test(rawText) ||
+      /^\s*(who|what|do you|does|is|are|so who|can you|i wonder)\b/i.test(rawText);
 
     // A claim naming a suspect and a position: this is what forces the
     // record to decide who was last in the room, the first time it
@@ -449,8 +467,13 @@
     // A claim made before asking about anything (askedCount < 2, the
     // same threshold the memory fragment uses) is refused outright:
     // the record won't commit on a blind guess, so accusing first and
-    // looking later stops being the winning move.
-    if (namesSuspect && mentionsPosition) {
+    // looking later stops being the winning move. Naming both suspects
+    // or negating the claim ("was NOT here") has no supported
+    // template (the parser is a dictionary, not NLU, and silently
+    // picking a suspect or silently inverting a denial is worse than
+    // an honest CANNOT) so both fall through to it instead of ever
+    // reaching the collapse logic below.
+    if (namesSuspect && mentionsPosition && !isQuestion && !namesBothSuspects && !isNegated) {
       var wasUnresolved = record.last_in_room === "unresolved";
       if (wasUnresolved && askedCount(record) < 2) {
         return { line: "REDACTED. NOT ENOUGH IS ESTABLISHED YET.", verdict: "REDACTED" };
