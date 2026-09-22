@@ -170,3 +170,41 @@ machine still engages); and the theory parser no longer requires a
 position word, since the theory box already frames the question. A
 re-run of the same naive playtest afterward hit zero CANNOT responses
 across 7 attempts, with sections unlocking visibly as each one landed.
+
+## Addendum 2: single-channel, oracular rebuild (scope correction)
+
+The two-form, paragraph-and-badge version above was itself wrong: it
+put a full text-adventure's worth of prose permanently on screen and
+split input into "exhibit" vs "theory" boxes, which contradicts the
+actual brief (one input mechanism, output as short as input, "no big
+screen, just knobs, gears, rotating cylinders for text"). Rebuilt to:
+
+- One input, hard `maxlength=48`, one output line that replaces
+  itself each turn. No separate theory affordance: naming a suspect
+  with a position word (a claim) is what triggers the delayed
+  collapse of `last_in_room`, in the same channel as everything else.
+- The glyph header lost its captions; it is now an unlabeled
+  concatenated code, matching "a code at the top written in special
+  characters," not a labeled stats readout.
+- Scene content is delivered one short authored line at a time
+  (physician and inscription reveal across a small fixed sequence as
+  asked; window/moth are one-shot), never a standing paragraph.
+- The mystery line ("SOMEONE WAS HERE BEFORE YOU ARRIVED.") is now
+  explicitly re-askable ("who was here last?" with no suspect named
+  recalls it) so the retroactive glyph flip is a player-triggered,
+  repeatable moment, not a passive re-render: verified the same exact
+  text returns with its glyph changed from unresolved to retroactive
+  once a claim has collapsed the record.
+- Known tradeoff: the unprompted "machine volunteers something" beat
+  (the memory fragment, once two things have been asked about) can
+  supersede that turn's actual answer. The superseded content isn't
+  lost, asking again returns it, but it's a deliberate one-turn cost
+  for a stronger beat, not an oversight.
+- `DISPUTED` is unreachable in this one room by design, not omission:
+  it needs a genuine second, conflicting source of evidence, which a
+  one-witness room doesn't have. Left for a later room rather than
+  forced in artificially.
+- Physical components (dice, mechanical counters, printed artifacts)
+  and the Lone Wolf-style RPG framing surfaced in project history are
+  explicitly out of scope; see AGENTS.md rules 11-12. Web/phone
+  browser only.

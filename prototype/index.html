@@ -2,265 +2,73 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Palimpsest — The Waiting Room (prototype)</title>
+<title>Palimpsest — the machine</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
     --bg: #0b0c0e;
     --panel: #131519;
-    --panel-2: #1a1d22;
     --ink: #cfd3d8;
     --ink-dim: #868d97;
     --ink-faint: #565c64;
     --line: #33383f;
     --accent: #8fb3a8;
-    --stipulated: #6fae9c;
-    --disputed: #c9a24b;
-    --sustained: #7fbf7f;
-    --overruled: #c06a5c;
-    --redacted: #9a9a9a;
-    --cannot: #9a86c9;
   }
-
   * { box-sizing: border-box; }
-
   html, body {
     background: var(--bg);
     color: var(--ink);
-    margin: 0;
-    padding: 0;
+    margin: 0; padding: 0;
     font-family: "JetBrains Mono", "Fira Mono", Consolas, "Courier New", monospace;
     font-size: 15px;
-    line-height: 1.55;
+    line-height: 1.5;
   }
-
   body {
-    max-width: 780px;
+    max-width: 480px;
     margin: 0 auto;
-    padding: 24px 18px 64px;
+    padding: 28px 18px 40px;
   }
 
-  a { color: var(--accent); }
-
-  /* ---------------------------------------------------------------
-   * Top bar: title, glyph header (the "spread"), New Session, Legend
-   * ------------------------------------------------------------- */
-  .topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    flex-wrap: wrap;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 12px;
+  /* Unlabeled state code. Not a page number: see GLYPH_HEADER_TABLE
+   * in the script for the auditable mapping. Never explained in UI. */
+  #code {
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
     margin-bottom: 18px;
   }
 
-  .title {
-    font-size: 13px;
-    letter-spacing: 0.08em;
-    color: var(--ink-dim);
-    text-transform: uppercase;
-  }
-
-  .topbar-controls {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-
-  button {
-    font-family: inherit;
-    font-size: 13px;
-    background: var(--panel-2);
-    color: var(--ink);
-    border: 1px solid var(--line);
-    padding: 6px 10px;
-    cursor: pointer;
-    letter-spacing: 0.03em;
-  }
-  button:hover:not(:disabled) { border-color: var(--ink-dim); }
-  button:disabled { opacity: 0.45; cursor: default; }
-
-  #legend-btn {
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    position: relative;
-    z-index: 1001;
-  }
-
-  /* ---------------------------------------------------------------
-   * Glyph header: three fixed positions, ORIGIN / OBSTACLE / OUTCOME.
-   * Never explain the mapping here — see the code comment near
-   * GLYPH_HEADER_TABLE for the auditable lookup.
-   * ------------------------------------------------------------- */
-  .glyphbar {
-    display: flex;
-    gap: 0;
-    font-size: 13px;
+  /* The device: one line of output, one gear. Nothing else lives here. */
+  .device {
     border: 1px solid var(--line);
     background: var(--panel);
+    padding: 22px 18px;
+    min-height: 84px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
   }
-  .glyphpos {
-    flex: 1 1 0;
-    padding: 6px 10px;
-    text-align: center;
-    border-right: 1px solid var(--line);
-  }
-  .glyphpos:last-child { border-right: none; }
-  .glyphpos .label {
-    display: block;
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    color: var(--ink-faint);
-  }
-  .glyphpos .glyph-val {
-    display: block;
+  #output {
+    flex: 1 1 auto;
     font-size: 16px;
-    margin-top: 2px;
-  }
-
-  .statusline {
-    font-size: 11px;
-    color: var(--ink-faint);
-    margin: 6px 2px 0;
     letter-spacing: 0.02em;
   }
-
-  /* ---------------------------------------------------------------
-   * Scene text
-   * ------------------------------------------------------------- */
-  .scene { margin: 22px 0; }
-  .scene p {
-    margin: 0 0 14px;
-    padding-left: 2px;
-  }
-  .scene h3, .exhibit-label {
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    color: var(--ink-faint);
-    text-transform: uppercase;
-    margin: 0 0 6px;
-  }
-
-  .sent { display: inline; }
-
-  .glyph {
-    display: inline-block;
-    width: 1.1em;
-    text-align: center;
-    margin-right: 4px;
-    font-weight: bold;
-  }
-
-  /* Epistemic-status treatments: EVERY status gets both a distinct
-   * glyph shape *and* a distinct underline style, so nothing here
-   * depends on color alone (see legend). */
-  .gl-OBSERVED    { color: var(--ink);      border-bottom: 2px solid var(--ink);      }
-  .gl-REPORTED    { color: var(--accent);   border-bottom: 2px dashed var(--accent);  }
-  .gl-INFERRED    { color: var(--disputed); border-bottom: 2px dotted var(--disputed);}
-  .gl-UNRESOLVED  { color: var(--ink-faint);border-bottom: none; }
-  .gl-RETROACTIVE { color: var(--cannot);   border-bottom: 3px double var(--cannot); }
-
+  .gl-OBSERVED    { border-bottom: 2px solid var(--ink); }
+  .gl-REPORTED    { border-bottom: 2px dashed var(--accent); color: var(--accent); }
+  .gl-INFERRED    { border-bottom: 2px dotted #c9a24b; color: #c9a24b; }
+  .gl-UNRESOLVED  { border-bottom: none; color: var(--ink-dim); }
+  .gl-RETROACTIVE { border-bottom: 3px double #9a86c9; color: #9a86c9; }
   .flicker { animation: flicker 2.6s ease-in-out infinite; }
   @keyframes flicker {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.45; }
-    52% { opacity: 1; }
-    54% { opacity: 0.6; }
-    56% { opacity: 1; }
+    0%, 100% { opacity: 1; } 50% { opacity: 0.45; }
+    52% { opacity: 1; } 54% { opacity: 0.6; } 56% { opacity: 1; }
   }
 
-  .sr-only {
-    position: absolute;
-    width: 1px; height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-
-  /* ---------------------------------------------------------------
-   * Input areas ("exhibit lines", not a chatbox)
-   * ------------------------------------------------------------- */
-  .exhibit-block {
-    border: 1px solid var(--line);
-    background: var(--panel);
-    padding: 12px 14px;
-    margin: 16px 0;
-  }
-  .exhibit-block.theory { border-style: dashed; }
-
-  .exhibit-row {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  textarea.exhibit-input {
-    flex: 1 1 320px;
-    font-family: inherit;
-    font-size: 14px;
-    background: var(--panel-2);
-    color: var(--ink);
-    border: 1px solid var(--line);
-    padding: 6px 8px;
-    resize: none;
-    width: 40ch;
-    max-width: 100%;
-  }
-  textarea.exhibit-input:focus { outline: 1px solid var(--accent); }
-
-  .charcount {
-    font-size: 10px;
-    color: var(--ink-faint);
-    margin-top: 3px;
-  }
-
-  /* ---------------------------------------------------------------
-   * Verdict readout
-   * ------------------------------------------------------------- */
-  .verdict-readout {
-    margin-top: 10px;
-    font-size: 13px;
-  }
-  .verdict-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border: 2px solid;
-    font-weight: bold;
-    letter-spacing: 0.04em;
-  }
-  .verdict-STIPULATED { border-style: solid;  border-color: var(--stipulated); color: var(--stipulated); }
-  .verdict-DISPUTED    { border-style: dashed; border-color: var(--disputed);   color: var(--disputed); }
-  .verdict-SUSTAINED   { border-style: double; border-color: var(--sustained);  color: var(--sustained); }
-  .verdict-OVERRULED   { border-style: dotted; border-color: var(--overruled);  color: var(--overruled); }
-  .verdict-REDACTED {
-    border-style: solid; border-color: var(--redacted); color: var(--panel);
-    background: repeating-linear-gradient(45deg, var(--redacted), var(--redacted) 4px, #4a4a4a 4px, #4a4a4a 8px);
-  }
-  .verdict-CANNOT {
-    border-style: groove; border-color: var(--cannot); color: var(--cannot); font-style: italic;
-  }
-
-  /* ---------------------------------------------------------------
-   * Gear (visual only; spin mapping is commented in JS, never in UI)
-   * ------------------------------------------------------------- */
-  .gearwrap {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 20px;
-    color: var(--ink-dim);
-  }
   .gear {
     display: inline-block;
+    flex: 0 0 auto;
+    font-size: 22px;
+    color: var(--ink-dim);
     transform-origin: 50% 50%;
   }
   .gear.spinning {
@@ -273,213 +81,120 @@
     to   { transform: rotate(calc(var(--gear-turns, 1) * 360deg)); }
   }
 
-  /* ---------------------------------------------------------------
-   * Maintenance ritual + footer / impression strip
-   * ------------------------------------------------------------- */
-  .ritual {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin: 18px 0;
-    font-size: 12px;
-    color: var(--ink-dim);
+  /* One input channel. Hard cap enforced by maxlength, not styling. */
+  form { margin: 16px 0 0; display: flex; gap: 8px; }
+  input[type="text"] {
+    flex: 1 1 auto;
+    font-family: inherit;
+    font-size: 14px;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    min-width: 0;
   }
+  input[type="text"]:focus { outline: 1px solid var(--accent); }
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--ink-dim); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  #charcount { font-size: 10px; color: var(--ink-faint); margin-top: 4px; }
 
-  .impression-strip {
-    margin-top: 30px;
-    padding-top: 10px;
-    border-top: 1px solid var(--line);
+  .toolbar {
+    display: flex;
+    gap: 16px;
+    margin-top: 22px;
     font-size: 11px;
     color: var(--ink-faint);
-    letter-spacing: 0.02em;
   }
+  .toolbar button {
+    background: none; border: none; padding: 0;
+    color: var(--ink-faint);
+    text-decoration: underline;
+    letter-spacing: 0.04em;
+  }
+  .toolbar button:disabled { text-decoration: none; }
 
-  /* ---------------------------------------------------------------
-   * Legend panel
-   * ------------------------------------------------------------- */
-  #legend-panel {
-    position: fixed;
-    top: 0; right: 0; bottom: 0;
-    width: min(380px, 92vw);
-    background: var(--panel);
-    border-left: 1px solid var(--line);
-    padding: 18px;
-    overflow-y: auto;
-    box-shadow: -8px 0 24px rgba(0,0,0,0.4);
-    z-index: 1000;
-  }
-  #legend-panel[hidden] { display: none; }
-  /* While the legend dialog is open, its own Close button is the way
-   * out — hide the topbar trigger so the two controls never visually
-   * overlap (the panel is fixed and spans the same top-right corner). */
-  body.legend-open #legend-btn { visibility: hidden; }
-  #legend-panel h2 {
-    font-size: 14px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink);
-    margin-top: 0;
-  }
-  #legend-panel h3 {
+  #legend {
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
     font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     color: var(--ink-dim);
-    margin: 18px 0 6px;
   }
-  #legend-panel dl { margin: 0; }
-  #legend-panel dt { color: var(--ink); font-weight: bold; margin-top: 8px; }
-  #legend-panel dd { margin: 2px 0 0 0; color: var(--ink-dim); font-size: 12.5px; }
-  #legend-panel .close-row { text-align: right; }
+  #legend[hidden] { display: none; }
+  #legend dt { color: var(--ink); font-weight: bold; margin-top: 8px; }
+  #legend dd { margin: 2px 0 0; }
 </style>
 </head>
 <body>
 
-  <div class="topbar">
-    <div>
-      <div class="title">Palimpsest — prototype: the waiting room</div>
-      <div id="glyphbar" class="glyphbar"></div>
-      <div id="statusline" class="statusline"></div>
-    </div>
-    <div class="topbar-controls">
-      <button id="new-session-btn" type="button">New Session</button>
-      <button id="legend-btn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="legend-panel" title="Legend">?</button>
-    </div>
+  <div id="code"></div>
+
+  <div class="device">
+    <span id="output"></span>
+    <span class="gear" id="gear" aria-hidden="true">⚙</span>
   </div>
 
-  <div class="scene" id="scene"></div>
+  <form id="consult-form" autocomplete="off">
+    <input id="consult-input" type="text" maxlength="48"
+      aria-label="Speak to the machine, maximum 48 characters">
+    <button type="submit">Send</button>
+  </form>
+  <div id="charcount">0/48</div>
 
-  <div class="exhibit-block">
-    <div class="exhibit-label">Exhibit — proposition for the record</div>
-    <form id="prop-form" autocomplete="off">
-      <div class="exhibit-row">
-        <textarea id="prop-input" class="exhibit-input" rows="2" cols="40" maxlength="80"
-          placeholder="_______________________________________________"
-          aria-label="Enter a proposition for the record, maximum 80 characters"></textarea>
-        <div class="gearwrap" aria-hidden="true">
-          <span id="gear" class="gear">⚙</span>
-        </div>
-        <button type="submit">Submit</button>
-      </div>
-      <div class="charcount"><span id="prop-count">0</span>/80</div>
-    </form>
-    <div class="verdict-readout" id="prop-verdict" aria-live="polite"></div>
+  <div class="toolbar">
+    <button id="new-session-btn" type="button">new session</button>
+    <button id="recalibrate-btn" type="button">recalibrate</button>
+    <button id="legend-btn" type="button" aria-expanded="false" aria-controls="legend">reference</button>
   </div>
 
-  <div class="exhibit-block theory">
-    <div class="exhibit-label">State a theory — who was last in this room</div>
-    <form id="theory-form" autocomplete="off">
-      <div class="exhibit-row">
-        <textarea id="theory-input" class="exhibit-input" rows="2" cols="40" maxlength="80"
-          placeholder="_______________________________________________"
-          aria-label="State a theory about who was last in the room, maximum 80 characters"></textarea>
-        <button type="submit">Submit theory</button>
-      </div>
-      <div class="charcount"><span id="theory-count">0</span>/80</div>
-    </form>
-    <div class="verdict-readout" id="theory-verdict" aria-live="polite"></div>
-  </div>
-
-  <div class="ritual">
-    <button id="recalibrate-btn" type="button">Recalibrate</button>
-    <span id="recalibrate-state"></span>
-  </div>
-
-  <div class="impression-strip" id="impression-strip"></div>
-
-  <div id="legend-panel" role="dialog" aria-modal="true" aria-labelledby="legend-title" hidden>
-    <div class="close-row"><button id="legend-close-btn" type="button">Close ✕</button></div>
-    <h2 id="legend-title">Legend</h2>
-
-    <h3>Glyph header positions</h3>
-    <dl>
-      <dt>ORIGIN</dt>
-      <dd>How far into the record this session has gone. It does not measure progress — you can surface and re-descend.</dd>
-      <dt>OBSTACLE</dt>
-      <dd>How coherent the record currently is. Contradictions wear it down; it can be restored (see Recalibrate below).</dd>
-      <dt>OUTCOME</dt>
-      <dd>Whether it has been established yet who was last in the room, and if so, who.</dd>
-    </dl>
-
-    <h3>Verdict vocabulary</h3>
-    <dl>
-      <dt>STIPULATED <span class="verdict-badge verdict-STIPULATED">solid border</span></dt>
-      <dd>Established. Not worth contesting further.</dd>
-      <dt>DISPUTED <span class="verdict-badge verdict-DISPUTED">dashed border</span></dt>
-      <dd>Active, unresolved contradiction.</dd>
-      <dt>SUSTAINED <span class="verdict-badge verdict-SUSTAINED">double border</span></dt>
-      <dd>Your theory holds against current evidence.</dd>
-      <dt>OVERRULED <span class="verdict-badge verdict-OVERRULED">dotted border</span></dt>
-      <dd>Your theory is incompatible with something stronger.</dd>
-      <dt>REDACTED <span class="verdict-badge verdict-REDACTED">diagonal-hatched fill</span></dt>
-      <dd>Exists, withheld. The withholding itself is evidence.</dd>
-      <dt>CANNOT BE ESTABLISHED <span class="verdict-badge verdict-CANNOT">grooved border, italic</span></dt>
-      <dd>Not a verdict on your claim — the parser's own admission that your wording used no term it recognizes.</dd>
-    </dl>
-
-    <h3>Epistemic status glyphs (beside sentences)</h3>
-    <dl>
-      <dt>● OBSERVED — solid underline</dt>
-      <dd>Directly seen by the machine in this session.</dd>
-      <dt>○ REPORTED — dashed underline</dt>
-      <dd>Told to the machine, not witnessed directly.</dd>
-      <dt>◇ INFERRED — dotted underline</dt>
-      <dd>Deduced, not stated outright.</dd>
-      <dt>· UNRESOLVED — no underline</dt>
-      <dd>Not yet decidable from the record.</dd>
-      <dt>◆ RETROACTIVE — double underline, gently flickers</dt>
-      <dd>Only became decidable because of something that happened later. The sentence's words never changed — only this indicator did.</dd>
-    </dl>
-
-    <h3>Recalibrate (maintenance ritual)</h3>
-    <dd>Once per session. Restores coherence toward its starting value, but permanently stops the RETROACTIVE glyph from flickering for the rest of this session — you keep a steadier record at the cost of a visible tell. Leaving it alone lets coherence keep drifting down as contradictions accumulate, but keeps that flicker visible.</dd>
-
-    <h3>Two memories</h3>
-    <dd>RECORD is this session's world-state. It resets whenever you start a New Session. IMPRESSION is what the machine has retained about every session it has ever run; it is stored on this device and never resets.</dd>
-  </div>
+  <dl id="legend" hidden>
+    <dt>Glyphs beside a line</dt>
+    <dd>solid underline = seen directly. dashed = told, not witnessed. dotted = inferred. no underline = not yet decidable. double underline (flickers) = only decidable now because of something later; the words never changed, only this mark did.</dd>
+    <dt>STIPULATED</dt><dd>established, not worth contesting.</dd>
+    <dt>SUSTAINED</dt><dd>your claim holds against current evidence.</dd>
+    <dt>OVERRULED</dt><dd>your claim conflicts with something stronger.</dd>
+    <dt>REDACTED</dt><dd>exists, withheld. the withholding is itself evidence.</dd>
+    <dt>CANNOT BE ESTABLISHED</dt><dd>not a verdict on your claim: the machine recognized no term it knows.</dd>
+    <dt>Recalibrate</dt><dd>once per session. restores the machine's coherence, but stops the flicker mark for the rest of this session.</dd>
+    <dt>Two memories</dt><dd>this session resets on New Session. what the machine has retained about every session it has ever run does not, and lives on this device only.</dd>
+  </dl>
 
 <script>
 (function () {
   "use strict";
 
   /* =================================================================
-   * Constants & lookup tables (auditable here; not explained in UI)
+   * Constants
    * =============================================================== */
-
-  // DEMO-ONLY constant. The real design calls for Epoch Drift to use
-  // a narratively-tuned interval (hours/days); two minutes makes the
-  // effect observable inside a single sitting for this prototype.
-  var DEMO_EPOCH_DRIFT_MS = 2 * 60 * 1000;
-
+  var INPUT_MAXLEN = 48;
+  var DEMO_EPOCH_DRIFT_MS = 2 * 60 * 1000; // demo-only, see docs/02
   var IMPRESSION_KEY = "palimpsest.impression.v1";
 
   /* -----------------------------------------------------------------
-   * Glyph header mapping table (the "spread"). Three fixed positions:
-   * ORIGIN / OBSTACLE / OUTCOME. Deterministic, fixed at build time.
-   * This table is intentionally never surfaced in the UI itself.
+   * Glyph header (the "spread"): three fixed positions, concatenated,
+   * unlabeled. Deterministic, fixed at build time. Never explained in
+   * the UI; this table is the only place the mapping is written down.
    *
-   *   ORIGIN   <- depth (0-3), one glyph per exact value:
-   *                0 -> "0·"   1 -> "1·"   2 -> "2·"   3 -> "3·"
-   *   OBSTACLE <- coherence (0-100), bucketed into 4 bands:
-   *                0-25   -> "××"  (critical)
-   *                26-50  -> "x·"  (strained)
-   *                51-75  -> "·x"  (holding)
-   *                76-100 -> "··"  (stable)
-   *   OUTCOME  <- last_in_room:
-   *                "unresolved" -> "?·"
-   *                "physician"  -> "P·"
-   *                "visitor"    -> "V·"
+   *   pos 1 <- depth (0-3):        "0·".."3·"
+   *   pos 2 <- coherence (0-100):  0-25 "××"  26-50 "x·"  51-75 "·x"  76-100 "··"
+   *   pos 3 <- last_in_room:       unresolved "?·"  physician "P·"  visitor "V·"
    * ----------------------------------------------------------------- */
-  function originGlyph(depth) {
-    var d = Math.max(0, Math.min(3, depth | 0));
-    return d + "·"; // "N·"
-  }
+  function originGlyph(depth) { return Math.max(0, Math.min(3, depth | 0)) + "·"; }
   function obstacleGlyph(coherence) {
     var c = Math.max(0, Math.min(100, coherence | 0));
-    if (c <= 25) return "××"; // ××
-    if (c <= 50) return "x·";      // x·
-    if (c <= 75) return "·x";      // ·x
-    return "··";              // ··
+    if (c <= 25) return "××";
+    if (c <= 50) return "x·";
+    if (c <= 75) return "·x";
+    return "··";
   }
   function outcomeGlyph(lastInRoom) {
     if (lastInRoom === "physician") return "P·";
@@ -487,92 +202,53 @@
     return "?·";
   }
 
-  /* -----------------------------------------------------------------
-   * Gear spin mapping. Never explained in the UI. Duration and turn
-   * count both scale with `eliminatedCount`: the number of distinct
-   * dictionary concepts the parser recognized in the submission that
-   * just resolved. Zero recognized concepts narrows nothing, so the
-   * gear barely turns; each additional recognized concept narrows the
-   * space of possible readings by one, so it spins faster and longer.
-   * ----------------------------------------------------------------- */
-  function gearDurationSeconds(eliminatedCount) {
-    var d = 2.2 - eliminatedCount * 0.35;
-    return Math.max(0.4, Math.min(2.2, d));
-  }
-  function gearTurns(eliminatedCount) {
-    return 1 + eliminatedCount;
-  }
+  // Gear spin: duration/turns scale with how many dictionary concepts
+  // the parser recognized in the submission that just resolved. Zero
+  // recognized concepts barely turns it; each extra concept narrows
+  // the reading space by one, so it spins faster and longer. Never
+  // explained in the UI.
+  function gearDurationSeconds(n) { return Math.max(0.4, Math.min(2.2, 2.2 - n * 0.35)); }
+  function gearTurns(n) { return 1 + n; }
 
-  /* -----------------------------------------------------------------
-   * Epistemic status glyphs. Every status carries both a distinct
-   * glyph shape and a distinct underline style (see CSS .gl-*), so
-   * nothing here depends on color alone.
-   * ----------------------------------------------------------------- */
-  var STATUS_GLYPH = {
-    OBSERVED:    "●", // ●
-    REPORTED:    "○", // ○
-    INFERRED:    "◇", // ◇
-    UNRESOLVED:  "·", // ·
-    RETROACTIVE: "◆"  // ◆
-  };
+  var STATUS_GLYPH = { OBSERVED: "●", REPORTED: "○", INFERRED: "◇", UNRESOLVED: "·", RETROACTIVE: "◆" };
 
-  /* -----------------------------------------------------------------
-   * Coherence cost table. Confirmations don't cost coherence;
-   * contradictions and unparseable submissions do. Demo-tuned values,
-   * fixed and deterministic (no RNG anywhere in this file).
-   * ----------------------------------------------------------------- */
-  var COHERENCE_DELTA = {
-    STIPULATED: 1,
-    SUSTAINED: 2,
-    DISPUTED: -6,
-    OVERRULED: -8,
-    REDACTED: -3,
-    CANNOT: -1
-  };
+  var COHERENCE_DELTA = { STIPULATED: 1, SUSTAINED: 2, DISPUTED: -6, OVERRULED: -8, REDACTED: -3, CANNOT: -1 };
 
   /* =================================================================
-   * Synonym dictionary — a small, hand-authored lookup, NOT NLU.
-   * Surface word/phrase -> one fixed canonical concept token.
+   * Synonym dictionary: hand-authored, not NLU.
    * =============================================================== */
   var SYNONYMS = {
     physician: "physician", doctor: "physician", surgeon: "physician",
     visitor: "visitor", stranger: "visitor",
     nobody: "nobody", "no one": "nobody", empty: "nobody",
-    door: "door", entrance: "door", gate: "door",
     window: "window", glass: "window",
     moth: "moth", insect: "moth",
     inscription: "inscription", carving: "inscription", carved: "inscription",
-    saw: "saw", observed: "saw", witnessed: "saw",
     lied: "lied", concealed: "lied", deceived: "lied",
     entered: "entered", "came in": "entered",
     left: "left", departed: "left", exited: "left",
     last: "last", final: "last",
     here: "here", "was here": "here"
   };
-
   function extractConcepts(raw) {
     var text = String(raw || "").toLowerCase();
     var found = [];
     for (var phrase in SYNONYMS) {
       if (!Object.prototype.hasOwnProperty.call(SYNONYMS, phrase)) continue;
-      var pattern = phrase.replace(/[- ]/g, "\\s+");
-      var re = new RegExp("\\b" + pattern + "\\b", "i");
+      var re = new RegExp("\\b" + phrase.replace(/[- ]/g, "\\s+") + "\\b", "i");
       if (re.test(text)) {
-        var concept = SYNONYMS[phrase];
-        if (found.indexOf(concept) === -1) found.push(concept);
+        var c = SYNONYMS[phrase];
+        if (found.indexOf(c) === -1) found.push(c);
       }
     }
     return found;
   }
 
   /* =================================================================
-   * Anti-datamining tiebreaker (AGENTS.md rule 6; docs/01 "Kessy's
-   * constraint"). Deliberately NOT Math.random(): the seed is the
-   * player's own real wallclock action timing (session start plus the
-   * deltas between their actual submit timestamps), which cannot be
-   * predicted or replayed from a static datamine of this file's text
-   * or string tables alone. Pure function: same inputs, same output,
-   * every time — testable and auditable.
+   * Anti-datamining tiebreaker (AGENTS.md rule 6). Seeded by the
+   * player's own real wallclock action timing, not Math.random(): a
+   * static dump of this file's strings cannot predict any individual
+   * playthrough's collapse. Pure function, same inputs same output.
    * =============================================================== */
   function tiebreakerHash(sessionStartMs, actionLog) {
     var acc = (sessionStartMs >>> 0) || 1;
@@ -582,218 +258,91 @@
       acc = Math.imul(acc, 16777619) >>> 0;
     }
     acc ^= actionLog.length;
-    acc = Math.imul(acc, 2246822519) >>> 0;
-    return acc >>> 0;
+    return (Math.imul(acc, 2246822519) >>> 0) >>> 0;
   }
   function tiebreakCandidate(sessionStartMs, actionLog) {
     return (tiebreakerHash(sessionStartMs, actionLog) % 2 === 0) ? "physician" : "visitor";
   }
-
-  /* -----------------------------------------------------------------
-   * Authored logic for resolving last_in_room, tried BEFORE the
-   * tiebreaker. Each rule is a fixed, inspectable fact about the
-   * fiction, not a probability.
-   * ----------------------------------------------------------------- */
-  function resolveLastInRoomByAuthoredLogic(record) {
-    // Rule A: a confirmed lie is authored evidence the physician was
-    // covering for his own presence.
-    if (record.trust_physician === false) return "physician";
-    // Rule B: a cleared physician *and* a read inscription (independent
-    // corroboration of someone else's hand in the room) points at the
-    // visitor.
-    if (record.trust_physician === true && record.inscription_read) return "visitor";
-    // Neither authored rule fires: genuinely underdetermined.
+  function resolveByAuthoredLogic(record) {
+    if (record.trust_physician === false) return "physician"; // a confirmed lie is evidence of covering for his own presence
+    if (record.trust_physician === true && record.inscription_stage >= 2) return "visitor"; // cleared physician + independent corroboration
     return null;
   }
   function collapseLastInRoom(record) {
-    var authored = resolveLastInRoomByAuthoredLogic(record);
-    if (authored) return authored;
-    return tiebreakCandidate(record.session_start_ms, record.action_log);
+    return resolveByAuthoredLogic(record) || tiebreakCandidate(record.session_start_ms, record.action_log);
   }
-
-  /* =================================================================
-   * Scene content (authored, fixed). Sentence status may be a plain
-   * string or a function(record) for the handful that depend on
-   * whether last_in_room has collapsed. Text itself never changes
-   * once written below — only which status function returns.
-   * =============================================================== */
-  var EPOCH_DRIFT_TEXT = {
-    // Epoch Drift substitution table: authored, not generated.
-    moth: "Something small and dry lies on the sill, dead some time now."
-  };
-
   function retroactiveOrUnresolved(record) {
     return record.last_in_room === "unresolved" ? "UNRESOLVED" : "RETROACTIVE";
   }
 
-  var SCENE = {
-    room: [
-      { text: "The table holds two cups, and only one shows a ring of use.", status: "OBSERVED" },
-      { text: "The window is shut; the latch has not been forced.", status: "OBSERVED" },
-      { text: function (r) {
-          return r.epoch_drift
-            ? EPOCH_DRIFT_TEXT.moth
-            : "A moth lies on the sill, wings closed, dead since morning.";
-        }, status: "OBSERVED" },
-      { text: "A physician is expected, though the hour is not fixed. Something has been carved into the door frame.", status: "OBSERVED" },
-      { text: "Someone was in this room before you arrived. The record does not yet say who.",
-        status: retroactiveOrUnresolved }
-    ],
-    physician: [
-      { text: "The physician arrives at intervals that are not quite regular.", status: "REPORTED" },
-      { text: "He refers to the patient in the past tense, then corrects himself to the present.", status: "REPORTED" },
-      { text: "Whether the correction is a kindness or a habit has not been settled.", status: "INFERRED" }
-    ],
-    inscription: [
-      { text: "Carved beside the door frame, in a hand that is not the physician's: THE ROOM REMEMBERS WHAT YOU FORGET.", status: "OBSERVED" },
-      { text: "Under it, scratched smaller and later: or forgets what you remember.", status: "INFERRED" }
-    ],
-    memory: [
-      { text: "A memory surfaces that does not feel entirely yours: a chair scraping back, a door easing shut.", status: "UNRESOLVED" },
-      { text: "The sound completes itself only once the room is asked directly who made it.",
-        status: retroactiveOrUnresolved }
-    ]
-  };
-
-  var PHYSICIAN_DEATH_READING_LINE =
-    "You have heard this correction fail before, in a record that this session does not contain.";
-
   /* =================================================================
-   * Deterministic parser: general propositions
+   * Content: short, authored, fixed. One beat at a time, never a
+   * paragraph. Physician and inscription reveal in sequence as asked;
+   * everything else is one-shot.
    * =============================================================== */
-  function parseProposition(raw, record) {
-    var concepts = extractConcepts(raw);
+  var WINDOW_LINE = { text: "THE WINDOW IS SHUT. THE LATCH IS WHOLE.", status: "OBSERVED" };
+  var MOTH_LINE = { text: "A MOTH ON THE SILL. DEAD SINCE MORNING.", status: "OBSERVED" };
+  var MOTH_LINE_DRIFT = { text: "SOMETHING DRY ON THE SILL. LONG DEAD.", status: "OBSERVED" };
 
-    // "door" is corroborating detail, not a requirement: a player will
-    // far more often say "the physician was here" than "the physician
-    // entered through the door", and both name the same claim.
-    var mentionsPosition = concepts.indexOf("entered") !== -1 ||
-      concepts.indexOf("left") !== -1 || concepts.indexOf("last") !== -1 ||
-      concepts.indexOf("here") !== -1;
-    var claimsPhysicianPosition = concepts.indexOf("physician") !== -1 && mentionsPosition;
-    var claimsVisitorPosition = concepts.indexOf("visitor") !== -1 && mentionsPosition;
+  var PHYSICIAN_LINES = [
+    { text: "A PHYSICIAN IS EXPECTED. THE HOUR IS NOT FIXED.", status: "REPORTED" },
+    { text: "HE ARRIVES AT INTERVALS THAT ARE NOT REGULAR.", status: "REPORTED" },
+    { text: "HE SPEAKS OF THE PATIENT IN PAST TENSE, THEN STOPS.", status: "INFERRED" }
+  ];
+  var PHYSICIAN_DEATH_LINE = { text: "YOU HAVE HEARD THAT STOP BEFORE, IN A RECORD YOU LACK NOW.", status: "INFERRED" };
 
-    if (claimsPhysicianPosition || claimsVisitorPosition) {
-      var claim = claimsPhysicianPosition ? "physician" : "visitor";
-      if (record.last_in_room === "unresolved") {
-        // A first-person claim of having witnessed it directly is a
-        // stronger, *active* clash with the record than merely asking
-        // about a fact the record has not released yet.
-        var verdict1 = concepts.indexOf("saw") !== -1 ? "DISPUTED" : "REDACTED";
-        return { verdict: verdict1, concepts: concepts, sideEffects: {} };
-      }
-      var verdict2 = (claim === record.last_in_room) ? "STIPULATED" : "OVERRULED";
-      return { verdict: verdict2, concepts: concepts, sideEffects: {} };
-    }
+  var INSCRIPTION_LINES = [
+    { text: "SOMETHING IS CARVED INTO THE DOOR FRAME.", status: "OBSERVED" },
+    { text: "NOT HIS HAND: THE ROOM REMEMBERS WHAT YOU FORGET.", status: "OBSERVED" },
+    { text: "SMALLER, LATER, BENEATH IT: OR FORGETS WHAT YOU REMEMBER.", status: "INFERRED" }
+  ];
 
-    // A position word with no named suspect ("who was here last?") is a
-    // question, not a proposition — the record holds the answer but
-    // this exhibit didn't name anyone to test it against.
-    if (mentionsPosition) {
-      return { verdict: "REDACTED", concepts: concepts, sideEffects: {} };
-    }
-
-    if (concepts.indexOf("physician") !== -1 && concepts.indexOf("lied") !== -1) {
-      if (record.trust_physician === null) {
-        var hasFullEvidence = record.window_examined && record.moth_examined && record.inscription_read;
-        return {
-          verdict: hasFullEvidence ? "SUSTAINED" : "OVERRULED",
-          concepts: concepts,
-          sideEffects: { trust_physician: hasFullEvidence ? false : true }
-        };
-      }
-      return {
-        verdict: record.trust_physician === false ? "STIPULATED" : "OVERRULED",
-        concepts: concepts,
-        sideEffects: {}
-      };
-    }
-
-    if (concepts.indexOf("physician") !== -1) {
-      return { verdict: "STIPULATED", concepts: concepts, sideEffects: { physician_asked: true } };
-    }
-    if (concepts.indexOf("window") !== -1) {
-      return { verdict: "STIPULATED", concepts: concepts, sideEffects: { window_examined: true } };
-    }
-    if (concepts.indexOf("moth") !== -1) {
-      return { verdict: "STIPULATED", concepts: concepts, sideEffects: { moth_examined: true } };
-    }
-    if (concepts.indexOf("inscription") !== -1) {
-      return { verdict: "STIPULATED", concepts: concepts, sideEffects: { inscription_read: true } };
-    }
-
-    // Recognized no supported template (whether or not individual
-    // words were in the dictionary) -> the parser's own out-of-
-    // vocabulary response. Distinct from every epistemic verdict.
-    return { verdict: "CANNOT", concepts: concepts, sideEffects: {} };
-  }
-
-  /* -----------------------------------------------------------------
-   * Theory templates (2-3 authored), for last_in_room only.
-   * ----------------------------------------------------------------- */
-  function parseTheory(raw) {
-    // The theory box is already labeled "who was last in this room" —
-    // requiring a position word here too just rejects correct answers
-    // for missing a redundant keyword. Naming a suspect is the theory.
-    var concepts = extractConcepts(raw);
-    if (concepts.indexOf("nobody") !== -1) return "nobody";
-    if (concepts.indexOf("physician") !== -1) return "physician";
-    if (concepts.indexOf("visitor") !== -1) return "visitor";
-    return null;
-  }
+  var MYSTERY_TEXT = "SOMEONE WAS HERE BEFORE YOU ARRIVED.";
+  var MEMORY_TEXT = "A MEMORY SURFACES: A CHAIR, A DOOR. NOT YET YOURS.";
 
   /* =================================================================
-   * RECORD (resets on New Session) / IMPRESSION (persists forever)
+   * RECORD (resets on New Session) / IMPRESSION (persists via
+   * localStorage, never reset by the app)
    * =============================================================== */
   function freshRecord() {
     return {
-      depth: 0,
       coherence: 100,
       trust_physician: null,
-      physician_asked: false,
+      physician_stage: 0,
+      inscription_stage: 0,
       window_examined: false,
       moth_examined: false,
-      inscription_read: false,
       last_in_room: "unresolved",
+      memory_surfaced: false,
       recalibrated_used: false,
       retroactive_flicker_locked: false,
       session_start_ms: Date.now(),
       action_log: [],
-      exhibit_no: 0,
       epoch_drift: false
     };
   }
+  function askedCount(r) {
+    return (r.window_examined ? 1 : 0) + (r.moth_examined ? 1 : 0) +
+      (r.inscription_stage > 0 ? 1 : 0) + (r.physician_stage > 0 ? 1 : 0);
+  }
+  function depthOf(r) { return Math.min(3, askedCount(r)); }
 
-  var memoryStore = {}; // in-memory fallback if localStorage is unavailable
+  var memoryStore = {};
   function storageGet(key) {
-    try { return window.localStorage.getItem(key); }
-    catch (e) { return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null; }
+    try { return window.localStorage.getItem(key); } catch (e) { return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null; }
   }
   function storageSet(key, value) {
-    try { window.localStorage.setItem(key, value); }
-    catch (e) { memoryStore[key] = value; }
+    try { window.localStorage.setItem(key, value); } catch (e) { memoryStore[key] = value; }
   }
-
   function loadImpression() {
     var raw = storageGet(IMPRESSION_KEY);
-    if (!raw) {
-      return { sessions_count: 0, first_seen_at: null, has_seen_death_reading: false, last_active_at: null };
-    }
+    if (!raw) return { sessions_count: 0, first_seen_at: null, has_seen_death_reading: false, last_active_at: null };
     try {
-      var parsed = JSON.parse(raw);
-      return {
-        sessions_count: parsed.sessions_count || 0,
-        first_seen_at: parsed.first_seen_at || null,
-        has_seen_death_reading: !!parsed.has_seen_death_reading,
-        last_active_at: parsed.last_active_at || null
-      };
-    } catch (e) {
-      return { sessions_count: 0, first_seen_at: null, has_seen_death_reading: false, last_active_at: null };
-    }
+      var p = JSON.parse(raw);
+      return { sessions_count: p.sessions_count || 0, first_seen_at: p.first_seen_at || null, has_seen_death_reading: !!p.has_seen_death_reading, last_active_at: p.last_active_at || null };
+    } catch (e) { return { sessions_count: 0, first_seen_at: null, has_seen_death_reading: false, last_active_at: null }; }
   }
-  function saveImpression(impression) {
-    storageSet(IMPRESSION_KEY, JSON.stringify(impression));
-  }
+  function saveImpression(imp) { storageSet(IMPRESSION_KEY, JSON.stringify(imp)); }
 
   var record = freshRecord();
   var impression = loadImpression();
@@ -807,253 +356,151 @@
     record.epoch_drift = (priorActive !== null) && ((now - priorActive) > DEMO_EPOCH_DRIFT_MS);
     impression.last_active_at = now;
     saveImpression(impression);
-    render();
+    renderCode();
+    showLine(MYSTERY_TEXT, retroactiveOrUnresolved(record));
   }
-
-  function touchLastActive() {
-    impression.last_active_at = Date.now();
-    saveImpression(impression);
-  }
+  function touchLastActive() { impression.last_active_at = Date.now(); saveImpression(impression); }
 
   /* =================================================================
-   * Rendering
+   * Rendering: exactly one output line at a time.
    * =============================================================== */
   function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
-
-  function sentenceHtml(s, rec) {
-    var status = typeof s.status === "function" ? s.status(rec) : s.status;
-    var text = typeof s.text === "function" ? s.text(rec) : s.text;
-    var glyph = STATUS_GLYPH[status];
-    var flickerClass = (status === "RETROACTIVE" && !rec.retroactive_flicker_locked) ? " flicker" : "";
-    return '<span class="sent">' +
-      '<span class="glyph gl-' + status + flickerClass + '" title="' + status + '" aria-hidden="true">' + glyph + '</span>' +
-      '<span class="sr-only">[' + status + '] </span>' +
-      escapeHtml(text) + ' </span>';
+  function renderCode() {
+    document.getElementById("code").textContent =
+      originGlyph(depthOf(record)) + " " + obstacleGlyph(record.coherence) + " " + outcomeGlyph(record.last_in_room);
   }
-
-  function paragraphHtml(sentences, rec) {
-    var out = "";
-    for (var i = 0; i < sentences.length; i++) out += sentenceHtml(sentences[i], rec);
-    return "<p>" + out + "</p>";
-  }
-
-  // Depth-gated reveal (docs/01, "Depth" + "absence as an asset"): the
-  // room's teaser sentence names the physician and the inscription so
-  // the player has the words to ask about them, but the elaborated
-  // sections only render once actually asked/examined — first render
-  // is the room alone. Nothing here is "locked" or announced; a
-  // section simply isn't present until its flag is true.
-  function renderScene() {
-    var el = document.getElementById("scene");
-    var html = "";
-    html += '<h3>The room</h3>' + paragraphHtml(SCENE.room, record);
-
-    if (record.physician_asked) {
-      var physicianSentences = SCENE.physician.slice();
-      if (impression.has_seen_death_reading) {
-        physicianSentences.push({ text: PHYSICIAN_DEATH_READING_LINE, status: "INFERRED" });
-      }
-      html += '<h3>The physician</h3>' + paragraphHtml(physicianSentences, record);
+  // status: an epistemic status (content line) or a bare verdict word (no glyph).
+  function showLine(text, status) {
+    var el = document.getElementById("output");
+    if (status && STATUS_GLYPH[status]) {
+      var flicker = (status === "RETROACTIVE" && !record.retroactive_flicker_locked) ? " flicker" : "";
+      el.innerHTML = '<span class="gl-' + status + flicker + '">' + STATUS_GLYPH[status] + " " + escapeHtml(text) + "</span>";
+    } else {
+      el.textContent = text;
     }
-    if (record.inscription_read) {
-      html += '<h3>The inscription</h3>' + paragraphHtml(SCENE.inscription, record);
-    }
-    var askedCount = (record.window_examined ? 1 : 0) + (record.moth_examined ? 1 : 0) +
-      (record.inscription_read ? 1 : 0) + (record.physician_asked ? 1 : 0);
-    if (askedCount >= 2) {
-      html += '<h3>A fragment</h3>' + paragraphHtml(SCENE.memory, record);
-    }
-    el.innerHTML = html;
+    renderCode();
   }
-
-  function renderGlyphbar() {
-    var el = document.getElementById("glyphbar");
-    el.innerHTML =
-      '<div class="glyphpos"><span class="label">ORIGIN</span><span class="glyph-val">' + originGlyph(record.depth) + '</span></div>' +
-      '<div class="glyphpos"><span class="label">OBSTACLE</span><span class="glyph-val">' + obstacleGlyph(record.coherence) + '</span></div>' +
-      '<div class="glyphpos"><span class="label">OUTCOME</span><span class="glyph-val">' + outcomeGlyph(record.last_in_room) + '</span></div>';
-  }
-
-  function renderStatusline() {
-    var el = document.getElementById("statusline");
-    el.textContent = "depth " + record.depth + "/3 · coherence " + record.coherence + "/100 · sessions " + impression.sessions_count;
-  }
-
-  function renderImpressionStrip() {
-    var el = document.getElementById("impression-strip");
-    var first = impression.first_seen_at ? new Date(impression.first_seen_at).toLocaleString() : "—";
-    el.textContent = "IMPRESSION — first seen " + first + " · sessions recorded " + impression.sessions_count +
-      (impression.has_seen_death_reading ? " · carries a death reading" : "");
-  }
-
-  function renderRecalibrate() {
-    var btn = document.getElementById("recalibrate-btn");
-    var state = document.getElementById("recalibrate-state");
-    btn.disabled = record.recalibrated_used;
-    state.textContent = record.recalibrated_used ? "(used this session)" : "(available once this session)";
-  }
-
-  function verdictBadgeHtml(verdict) {
-    var label = verdict === "CANNOT" ? "CANNOT BE ESTABLISHED" : verdict;
-    var cls = verdict === "CANNOT" ? "verdict-CANNOT" : "verdict-" + verdict;
-    return '<span class="verdict-badge ' + cls + '">' + label + '</span>';
-  }
-
-  function render() {
-    renderGlyphbar();
-    renderStatusline();
-    renderScene();
-    renderImpressionStrip();
-    renderRecalibrate();
-  }
-
-  /* =================================================================
-   * Gear animation
-   * =============================================================== */
-  function spinGear(eliminatedCount) {
+  function spinGear(n) {
     var gear = document.getElementById("gear");
     gear.classList.remove("spinning");
     gear.style.animationDuration = "0s";
-    // force reflow so the animation restarts cleanly
     void gear.offsetWidth;
-    var duration = gearDurationSeconds(eliminatedCount);
-    var turns = gearTurns(eliminatedCount);
-    gear.style.setProperty("--gear-turns", String(turns));
-    gear.style.animationDuration = duration + "s";
+    gear.style.setProperty("--gear-turns", String(gearTurns(n)));
+    gear.style.animationDuration = gearDurationSeconds(n) + "s";
     gear.classList.add("spinning");
+  }
+  function applyDelta(verdict) {
+    var d = COHERENCE_DELTA[verdict] || 0;
+    record.coherence = Math.max(0, Math.min(100, record.coherence + d));
   }
 
   /* =================================================================
-   * Coherence / depth bookkeeping
+   * The single consultation channel. Everything the player can do
+   * goes through here: examine, claim, ask, recall. No separate modes.
    * =============================================================== */
-  function applyCoherenceDelta(verdictKey) {
-    var delta = COHERENCE_DELTA[verdictKey] || 0;
-    record.coherence = Math.max(0, Math.min(100, record.coherence + delta));
-  }
+  function consult(raw) {
+    var concepts = extractConcepts(raw);
+    var mentionsPosition = concepts.indexOf("entered") !== -1 || concepts.indexOf("left") !== -1 ||
+      concepts.indexOf("last") !== -1 || concepts.indexOf("here") !== -1;
+    var namesSuspect = concepts.indexOf("physician") !== -1 || concepts.indexOf("visitor") !== -1;
 
-  function recomputeDepth() {
-    var count = (record.window_examined ? 1 : 0) + (record.moth_examined ? 1 : 0) +
-      (record.inscription_read ? 1 : 0) + (record.physician_asked ? 1 : 0);
-    record.depth = Math.min(3, count);
-  }
-
-  function applySideEffects(effects) {
-    if (!effects) return;
-    if (Object.prototype.hasOwnProperty.call(effects, "physician_asked")) record.physician_asked = effects.physician_asked;
-    if (Object.prototype.hasOwnProperty.call(effects, "window_examined")) record.window_examined = effects.window_examined;
-    if (Object.prototype.hasOwnProperty.call(effects, "moth_examined")) record.moth_examined = effects.moth_examined;
-    if (Object.prototype.hasOwnProperty.call(effects, "inscription_read")) record.inscription_read = effects.inscription_read;
-    if (Object.prototype.hasOwnProperty.call(effects, "trust_physician")) {
-      record.trust_physician = effects.trust_physician;
-      if (effects.trust_physician === false) {
-        impression.has_seen_death_reading = true;
-        saveImpression(impression);
-      }
+    // A claim naming a suspect and a position: this is what forces the
+    // record to decide who was last in the room, the first time it
+    // happens. Later assertions just test against what was decided.
+    if (namesSuspect && mentionsPosition) {
+      var claim = concepts.indexOf("physician") !== -1 ? "physician" : "visitor";
+      var wasUnresolved = record.last_in_room === "unresolved";
+      if (wasUnresolved) record.last_in_room = collapseLastInRoom(record);
+      var matches = claim === record.last_in_room;
+      return { line: matches ? (wasUnresolved ? "SUSTAINED." : "STIPULATED.") : "OVERRULED.", verdict: matches ? (wasUnresolved ? "SUSTAINED" : "STIPULATED") : "OVERRULED" };
     }
-    recomputeDepth();
+    if (concepts.indexOf("nobody") !== -1) {
+      return { line: "OVERRULED.", verdict: "OVERRULED" }; // two cups on the table say otherwise
+    }
+    // A position word with no named suspect: not a claim, a recall of
+    // the mystery itself. Same words as before; only the glyph can
+    // have changed, if something since decided who it was.
+    if (mentionsPosition) {
+      return { line: MYSTERY_TEXT, status: retroactiveOrUnresolved(record) };
+    }
+    if (concepts.indexOf("physician") !== -1 && concepts.indexOf("lied") !== -1) {
+      if (record.trust_physician === null) {
+        var full = record.window_examined && record.moth_examined && record.inscription_stage > 0;
+        record.trust_physician = !full;
+        return { line: full ? "SUSTAINED." : "OVERRULED.", verdict: full ? "SUSTAINED" : "OVERRULED" };
+      }
+      var ok = record.trust_physician === false;
+      return { line: ok ? "STIPULATED." : "OVERRULED.", verdict: ok ? "STIPULATED" : "OVERRULED" };
+    }
+    if (concepts.indexOf("physician") !== -1) {
+      var pl = PHYSICIAN_LINES[Math.min(record.physician_stage, PHYSICIAN_LINES.length - 1)];
+      if (record.physician_stage >= PHYSICIAN_LINES.length && impression.has_seen_death_reading) pl = PHYSICIAN_DEATH_LINE;
+      record.physician_stage = Math.min(record.physician_stage + 1, PHYSICIAN_LINES.length);
+      return { line: pl.text, status: pl.status };
+    }
+    if (concepts.indexOf("visitor") !== -1) {
+      return { line: "REDACTED.", verdict: "REDACTED" }; // real, but nothing here reveals them directly
+    }
+    if (concepts.indexOf("window") !== -1) {
+      record.window_examined = true;
+      return { line: WINDOW_LINE.text, status: WINDOW_LINE.status };
+    }
+    if (concepts.indexOf("moth") !== -1) {
+      record.moth_examined = true;
+      var m = record.epoch_drift ? MOTH_LINE_DRIFT : MOTH_LINE;
+      return { line: m.text, status: m.status };
+    }
+    if (concepts.indexOf("inscription") !== -1) {
+      var il = INSCRIPTION_LINES[Math.min(record.inscription_stage, INSCRIPTION_LINES.length - 1)];
+      record.inscription_stage = Math.min(record.inscription_stage + 1, INSCRIPTION_LINES.length);
+      return { line: il.text, status: il.status };
+    }
+    return { line: "CANNOT BE ESTABLISHED.", verdict: "CANNOT" };
+  }
+
+  function handleSubmit(raw) {
+    var beforeCount = askedCount(record);
+    var result = consult(raw);
+    if (result.verdict) applyDelta(result.verdict);
+    var afterCount = askedCount(record);
+    // The machine volunteers this once, unprompted, the moment two
+    // things have been asked about: it is not what you asked for.
+    if (!record.memory_surfaced && beforeCount < 2 && afterCount >= 2) {
+      record.memory_surfaced = true;
+      showLine(MEMORY_TEXT, retroactiveOrUnresolved(record));
+    } else if (result.status) {
+      showLine(result.line, result.status);
+    } else {
+      showLine(result.line, null);
+    }
+    var concepts = extractConcepts(raw);
+    spinGear(concepts.length);
   }
 
   /* =================================================================
    * Wiring
    * =============================================================== */
-  function wireCharCount(inputId, countId) {
-    var input = document.getElementById(inputId);
-    var count = document.getElementById(countId);
-    input.addEventListener("input", function () {
-      count.textContent = String(input.value.length);
-    });
-    input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        input.form.requestSubmit ? input.form.requestSubmit() : input.form.dispatchEvent(new Event("submit", { cancelable: true }));
-      }
-    });
-  }
-
   function init() {
     startNewSession();
 
-    wireCharCount("prop-input", "prop-count");
-    wireCharCount("theory-input", "theory-count");
+    var input = document.getElementById("consult-input");
+    var count = document.getElementById("charcount");
+    input.addEventListener("input", function () { count.textContent = input.value.length + "/" + INPUT_MAXLEN; });
 
-    document.getElementById("new-session-btn").addEventListener("click", function () {
-      startNewSession();
-    });
-
-    function setLegendOpen(open) {
-      var panel = document.getElementById("legend-panel");
-      var btn = document.getElementById("legend-btn");
-      if (open) { panel.removeAttribute("hidden"); }
-      else { panel.setAttribute("hidden", ""); }
-      btn.setAttribute("aria-expanded", open ? "true" : "false");
-      document.body.classList.toggle("legend-open", open);
-      if (open) { document.getElementById("legend-close-btn").focus(); }
-      else { btn.focus(); }
-    }
-    document.getElementById("legend-btn").addEventListener("click", function () {
-      setLegendOpen(document.getElementById("legend-panel").hasAttribute("hidden"));
-    });
-    document.getElementById("legend-close-btn").addEventListener("click", function () {
-      setLegendOpen(false);
-    });
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && !document.getElementById("legend-panel").hasAttribute("hidden")) {
-        setLegendOpen(false);
-      }
-    });
-
-    document.getElementById("prop-form").addEventListener("submit", function (e) {
+    document.getElementById("consult-form").addEventListener("submit", function (e) {
       e.preventDefault();
-      var input = document.getElementById("prop-input");
       var raw = input.value.trim();
       if (!raw) return;
       record.action_log.push(Date.now());
-      record.exhibit_no += 1;
-      var result = parseProposition(raw, record);
-      applySideEffects(result.sideEffects);
-      applyCoherenceDelta(result.verdict);
-      spinGear(result.concepts.length);
       touchLastActive();
-      render();
-      document.getElementById("prop-verdict").innerHTML =
-        "Exhibit " + String(record.exhibit_no).padStart(3, "0") + ": " + verdictBadgeHtml(result.verdict);
+      handleSubmit(raw);
       input.value = "";
-      document.getElementById("prop-count").textContent = "0";
+      count.textContent = "0/" + INPUT_MAXLEN;
     });
 
-    document.getElementById("theory-form").addEventListener("submit", function (e) {
-      e.preventDefault();
-      var input = document.getElementById("theory-input");
-      var raw = input.value.trim();
-      if (!raw) return;
-      record.action_log.push(Date.now());
-      var candidate = parseTheory(raw);
-      var verdict;
-      if (candidate === null) {
-        verdict = "CANNOT";
-      } else {
-        if (record.last_in_room === "unresolved") {
-          record.last_in_room = collapseLastInRoom(record);
-        }
-        if (candidate === "nobody") {
-          // Two cups on the table say otherwise: the room was occupied.
-          verdict = "OVERRULED";
-        } else {
-          verdict = (candidate === record.last_in_room) ? "SUSTAINED" : "OVERRULED";
-        }
-      }
-      applyCoherenceDelta(verdict);
-      spinGear(extractConcepts(raw).length);
-      touchLastActive();
-      render();
-      document.getElementById("theory-verdict").innerHTML = verdictBadgeHtml(verdict);
-      input.value = "";
-      document.getElementById("theory-count").textContent = "0";
-    });
+    document.getElementById("new-session-btn").addEventListener("click", startNewSession);
 
     document.getElementById("recalibrate-btn").addEventListener("click", function () {
       if (record.recalibrated_used) return;
@@ -1061,15 +508,21 @@
       record.recalibrated_used = true;
       record.retroactive_flicker_locked = true;
       touchLastActive();
-      render();
+      renderCode();
+      document.getElementById("recalibrate-btn").disabled = true;
+    });
+
+    document.getElementById("legend-btn").addEventListener("click", function () {
+      var panel = document.getElementById("legend");
+      var btn = document.getElementById("legend-btn");
+      var open = panel.hasAttribute("hidden");
+      if (open) panel.removeAttribute("hidden"); else panel.setAttribute("hidden", "");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
     });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
 })();
 </script>
 </body>

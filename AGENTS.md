@@ -24,3 +24,14 @@ touching runtime code. These are laws, not suggestions:
    new fragments at runtime.
 10. Prefer plain, dependency-free implementations (no framework, no
     build step) unless a milestone specifically requires otherwise.
+11. This is a web project only: it must run in a browser, opened
+    directly (including from a phone browser), nothing else. No
+    physical components of any kind (no dice, no printed artifacts,
+    no accessories, no board-game pieces). Any physical-object idea
+    surfacing in project history (transparency sheets, sealed
+    envelopes, per-copy printed seeds, mechanical counters) is
+    archived inspiration, not a spec to build toward.
+12. This is not a Lone Wolf-style branching RPG (no inventory, no
+    combat, no world map, no stat/loot trees). That survey was
+    background context, not a design target. The machine philosophy
+    in docs/01 is the actual spec.
