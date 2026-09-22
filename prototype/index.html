@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Palimpsest — the machine</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0b0c0e;
+    --panel: #131519;
+    --ink: #cfd3d8;
+    --ink-dim: #868d97;
+    --ink-faint: #565c64;
+    --line: #33383f;
+    --accent: #8fb3a8;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    margin: 0; padding: 0;
+    font-family: "JetBrains Mono", "Fira Mono", Consolas, "Courier New", monospace;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  body {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 28px 18px 40px;
+  }
+
+  /* Unlabeled state code. Not a page number: see GLYPH_HEADER_TABLE
+   * in the script for the auditable mapping. Never explained in UI. */
+  #code {
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    margin-bottom: 18px;
+  }
+
+  /* The device: one line of output, one gear. Nothing else lives here. */
+  .device {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    padding: 22px 18px;
+    min-height: 84px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  #output {
+    flex: 1 1 auto;
+    font-size: 16px;
+    letter-spacing: 0.02em;
+  }
+  .gl-OBSERVED    { border-bottom: 2px solid var(--ink); }
+  .gl-REPORTED    { border-bottom: 2px dashed var(--accent); color: var(--accent); }
+  .gl-INFERRED    { border-bottom: 2px dotted #c9a24b; color: #c9a24b; }
+  .gl-UNRESOLVED  { border-bottom: none; color: var(--ink-dim); }
+  .gl-RETROACTIVE { border-bottom: 3px double #9a86c9; color: #9a86c9; }
+  .flicker { animation: flicker 2.6s ease-in-out infinite; }
+  /* Coherence <= 50 (the same band obstacleGlyph already reports as
+   * "x*" or worse) becomes a felt effect, not just a digit: a slow,
+   * subtle widen/tighten on the output line. Real cause every time:
+   * this class only toggles from the coherence band, nothing else. */
+  .device.strained #output { animation: strain 3.2s ease-in-out infinite; }
+  @keyframes strain {
+    0%, 100% { letter-spacing: 0.02em; }
+    50% { letter-spacing: 0.09em; }
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.45; }
+    52% { opacity: 1; } 54% { opacity: 0.6; } 56% { opacity: 1; }
+  }
+
+  .gear {
+    display: inline-block;
+    flex: 0 0 auto;
+    font-size: 22px;
+    color: var(--ink-dim);
+    transform-origin: 50% 50%;
+  }
+  .gear.spinning {
+    animation-name: gearspin;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+  @keyframes gearspin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(calc(var(--gear-turns, 1) * 360deg)); }
+  }
+
+  /* One input channel. Hard cap enforced by maxlength, not styling. */
+  form { margin: 16px 0 0; display: flex; gap: 8px; }
+  input[type="text"] {
+    flex: 1 1 auto;
+    font-family: inherit;
+    font-size: 14px;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    min-width: 0;
+  }
+  input[type="text"]:focus { outline: 1px solid var(--accent); }
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--ink-dim); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  #charcount { font-size: 10px; color: var(--ink-faint); margin-top: 4px; }
+
+  .toolbar {
+    display: flex;
+    gap: 16px;
+    margin-top: 22px;
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+  .toolbar button {
+    background: none; border: none; padding: 0;
+    color: var(--ink-faint);
+    text-decoration: underline;
+    letter-spacing: 0.04em;
+  }
+  .toolbar button:disabled { text-decoration: none; }
+
+  #legend {
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  #legend[hidden] { display: none; }
+  #legend dt { color: var(--ink); font-weight: bold; margin-top: 8px; }
+  #legend dd { margin: 2px 0 0; }
+</style>
+</head>
+<body>
+
+  <div id="code"></div>
+
+  <div class="device">
+    <span id="output"></span>
+    <span class="gear" id="gear" aria-hidden="true">⚙</span>
+  </div>
+
+  <form id="consult-form" autocomplete="off">
+    <input id="consult-input" type="text" maxlength="48"
+      aria-label="Speak to the machine, maximum 48 characters">
+    <button type="submit">Send</button>
+  </form>
+  <div id="charcount">0/48</div>
+
+  <div class="toolbar">
+    <button id="new-session-btn" type="button">new session</button>
+    <button id="recalibrate-btn" type="button">recalibrate</button>
+    <button id="legend-btn" type="button" aria-expanded="false" aria-controls="legend">reference</button>
+  </div>
+
+  <dl id="legend" hidden>
+    <dt>Glyphs beside a line</dt>
+    <dd>solid underline = seen directly. dashed = told, not witnessed. dotted = inferred. no underline = not yet decidable. double underline (flickers) = only decidable now because of something later; the words never changed, only this mark did.</dd>
+    <dt>STIPULATED</dt><dd>established, not worth contesting.</dd>
+    <dt>SUSTAINED</dt><dd>your claim holds against current evidence.</dd>
+    <dt>OVERRULED</dt><dd>your claim conflicts with something stronger.</dd>
+    <dt>REDACTED</dt><dd>exists, withheld. the withholding is itself evidence.</dd>
+    <dt>CANNOT BE ESTABLISHED</dt><dd>not a verdict on your claim: the machine recognized no term it knows.</dd>
+    <dt>Recalibrate</dt><dd>once per session. restores the machine's coherence, but stops the flicker mark for the rest of this session.</dd>
+    <dt>Two memories</dt><dd>this session resets on New Session. what the machine has retained about every session it has ever run does not, and lives on this device only.</dd>
+  </dl>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =================================================================
+   * Constants
+   * =============================================================== */
+  var INPUT_MAXLEN = 48;
+  var DEMO_EPOCH_DRIFT_MS = 2 * 60 * 1000; // demo-only, see docs/02
+  var IMPRESSION_KEY = "palimpsest.impression.v1";
+
+  /* -----------------------------------------------------------------
+   * Glyph header (the "spread"): three fixed positions, concatenated,
+   * unlabeled. Deterministic, fixed at build time. Never explained in
+   * the UI; this table is the only place the mapping is written down.
+   *
+   *   pos 1 <- depth (0-3):        "0·".."3·"
+   *   pos 2 <- coherence (0-100):  0-25 "××"  26-50 "x·"  51-75 "·x"  76-100 "··"
+   *   pos 3 <- last_in_room:       unresolved "?·"  physician "P·"  visitor "V·"
+   * ----------------------------------------------------------------- */
+  function originGlyph(depth) { return Math.max(0, Math.min(3, depth | 0)) + "·"; }
+  function obstacleGlyph(coherence) {
+    var c = Math.max(0, Math.min(100, coherence | 0));
+    if (c <= 25) return "××";
+    if (c <= 50) return "x·";
+    if (c <= 75) return "·x";
+    return "··";
+  }
+  function outcomeGlyph(lastInRoom) {
+    if (lastInRoom === "physician") return "P·";
+    if (lastInRoom === "visitor") return "V·";
+    return "?·";
+  }
+
+  // Gear spin: duration/turns scale with how many dictionary concepts
+  // the parser recognized in the submission that just resolved. Zero
+  // recognized concepts barely turns it; each extra concept narrows
+  // the reading space by one, so it spins faster and longer. Never
+  // explained in the UI.
+  function gearDurationSeconds(n) { return Math.max(0.4, Math.min(2.2, 2.2 - n * 0.35)); }
+  function gearTurns(n) { return 1 + n; }
+
+  var STATUS_GLYPH = { OBSERVED: "●", REPORTED: "○", INFERRED: "◇", UNRESOLVED: "·", RETROACTIVE: "◆" };
+
+  var COHERENCE_DELTA = { STIPULATED: 1, SUSTAINED: 2, DISPUTED: -6, OVERRULED: -8, REDACTED: -3, CANNOT: -1 };
+
+  /* =================================================================
+   * Synonym dictionary: hand-authored, not NLU.
+   * =============================================================== */
+  var SYNONYMS = {
+    physician: "physician", doctor: "physician", surgeon: "physician",
+    visitor: "visitor", stranger: "visitor",
+    nobody: "nobody", "no one": "nobody", empty: "nobody",
+    table: "table", cups: "table", cup: "table",
+    window: "window", glass: "window",
+    moth: "moth", insect: "moth", bug: "moth",
+    inscription: "inscription", carving: "inscription", carved: "inscription",
+    door: "inscription", frame: "inscription",
+    lied: "lied", concealed: "lied", deceived: "lied",
+    entered: "entered", "came in": "entered",
+    left: "left", departed: "left", exited: "left",
+    last: "last", final: "last",
+    here: "here", "was here": "here",
+    not: "negation", never: "negation", wasn: "negation", didn: "negation"
+  };
+  function extractConcepts(raw) {
+    var text = String(raw || "").toLowerCase();
+    var found = [];
+    for (var phrase in SYNONYMS) {
+      if (!Object.prototype.hasOwnProperty.call(SYNONYMS, phrase)) continue;
+      var re = new RegExp("\\b" + phrase.replace(/[- ]/g, "\\s+") + "\\b", "i");
+      if (re.test(text)) {
+        var c = SYNONYMS[phrase];
+        if (found.indexOf(c) === -1) found.push(c);
+      }
+    }
+    return found;
+  }
+
+  /* =================================================================
+   * Anti-datamining tiebreaker (AGENTS.md rule 6). Seeded by the
+   * player's own real wallclock action timing, not Math.random(): a
+   * static dump of this file's strings cannot predict any individual
+   * playthrough's collapse. Pure function, same inputs same output.
+   * =============================================================== */
+  function tiebreakerHash(sessionStartMs, actionLog) {
+    var acc = (sessionStartMs >>> 0) || 1;
+    for (var i = 1; i < actionLog.length; i++) {
+      var delta = Math.max(1, actionLog[i] - actionLog[i - 1]);
+      acc ^= delta;
+      acc = Math.imul(acc, 16777619) >>> 0;
+    }
+    acc ^= actionLog.length;
+    return (Math.imul(acc, 2246822519) >>> 0) >>> 0;
+  }
+  function tiebreakCandidate(sessionStartMs, actionLog) {
+    return (tiebreakerHash(sessionStartMs, actionLog) % 2 === 0) ? "physician" : "visitor";
+  }
+  function resolveByAuthoredLogic(record) {
+    if (record.trust_physician === false) return "physician"; // a confirmed lie is evidence of covering for his own presence
+    if (record.trust_physician === true && record.inscription_stage >= 2) return "visitor"; // cleared physician + independent corroboration
+    return null;
+  }
+  function collapseLastInRoom(record) {
+    return resolveByAuthoredLogic(record) || tiebreakCandidate(record.session_start_ms, record.action_log);
+  }
+  function retroactiveOrUnresolved(record) {
+    return record.last_in_room === "unresolved" ? "UNRESOLVED" : "RETROACTIVE";
+  }
+
+  /* =================================================================
+   * Content: short, authored, fixed. One beat at a time, never a
+   * paragraph. Physician and inscription reveal in sequence as asked;
+   * everything else is one-shot.
+   * =============================================================== */
+  var TABLE_LINE = { text: "TWO CUPS ON THE TABLE. ONLY ONE SHOWS USE.", status: "OBSERVED" };
+  var WINDOW_LINE = { text: "THE WINDOW IS SHUT. THE LATCH IS WHOLE.", status: "OBSERVED" };
+  var MOTH_LINE = { text: "A MOTH ON THE SILL. DEAD SINCE MORNING.", status: "OBSERVED" };
+  var MOTH_LINE_DRIFT = { text: "SOMETHING DRY ON THE SILL. LONG DEAD.", status: "OBSERVED" };
+
+  var PHYSICIAN_LINES = [
+    { text: "A PHYSICIAN IS EXPECTED. THE HOUR IS NOT FIXED.", status: "REPORTED" },
+    { text: "HE ARRIVES AT INTERVALS THAT ARE NOT REGULAR.", status: "REPORTED" },
+    { text: "HE NAMES THE PATIENT, PAST TENSE, THEN STOPS.", status: "INFERRED" }
+  ];
+  var PHYSICIAN_DEATH_LINE = { text: "YOU HEARD THAT STOP BEFORE. RECORD LOST.", status: "INFERRED" };
+
+  var INSCRIPTION_LINES = [
+    { text: "SOMETHING IS CARVED INTO THE DOOR FRAME.", status: "OBSERVED" },
+    { text: "NOT HIS HAND: ROOM REMEMBERS WHAT YOU FORGET.", status: "OBSERVED" },
+    { text: "BENEATH, SMALLER: OR FORGETS WHAT YOU REMEMBER.", status: "INFERRED" }
+  ];
+
+  var MYSTERY_TEXT = "SOMEONE WAS HERE BEFORE YOU ARRIVED.";
+  var MEMORY_TEXT = "A MEMORY SURFACES: A CHAIR, A DOOR. NOT YOURS.";
+  // Resolving who was last in the room is not the end of the record:
+  // the machine opens exactly one further, unresolved thread once you
+  // ask it anything else afterward. Fires once per session, never on
+  // the same turn that did the collapsing (that turn's own verdict
+  // needs to be seen clean).
+  var FOLLOWUP_TEXT = "WHO WAS THE PATIENT? THE RECORD DOES NOT SAY.";
+
+  // A blind first attempt has nothing to go on but the mystery line:
+  // no noun in it is examinable, so an unguided player has no way to
+  // know "window" or "moth" or "inscription" are the words that work.
+  // Rather than answer the first few unrecognized inputs with a flat
+  // rejection, the machine offers one of these instead, bounded and
+  // fixed (never random, never repeats within a session): it is
+  // changing the subject, not confirming or examining anything, so it
+  // carries no glyph and costs no coherence. Once exhausted, an
+  // unrecognized input gets the honest CANNOT verdict.
+  var NUDGE_LINES = [
+    "A WINDOW. A MOTH DEAD ON THE SILL.",
+    "A PHYSICIAN IS EXPECTED. SOMETHING IS CARVED."
+  ];
+
+  /* =================================================================
+   * RECORD (resets on New Session) / IMPRESSION (persists via
+   * localStorage, never reset by the app)
+   * =============================================================== */
+  function freshRecord() {
+    return {
+      coherence: 100,
+      trust_physician: null,
+      physician_stage: 0,
+      inscription_stage: 0,
+      window_examined: false,
+      moth_examined: false,
+      table_examined: false,
+      last_in_room: "unresolved",
+      memory_surfaced: false,
+      followup_surfaced: false,
+      just_collapsed: false,
+      nudge_index: 0,
+      recalibrated_used: false,
+      retroactive_flicker_locked: false,
+      session_start_ms: Date.now(),
+      action_log: [],
+      epoch_drift: false
+    };
+  }
+  function askedCount(r) {
+    return (r.window_examined ? 1 : 0) + (r.moth_examined ? 1 : 0) +
+      (r.inscription_stage > 0 ? 1 : 0) + (r.physician_stage > 0 ? 1 : 0);
+  }
+  function depthOf(r) { return Math.min(3, askedCount(r)); }
+
+  var memoryStore = {};
+  function storageGet(key) {
+    try { return window.localStorage.getItem(key); } catch (e) { return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null; }
+  }
+  function storageSet(key, value) {
+    try { window.localStorage.setItem(key, value); } catch (e) { memoryStore[key] = value; }
+  }
+  function loadImpression() {
+    var raw = storageGet(IMPRESSION_KEY);
+    if (!raw) return { sessions_count: 0, first_seen_at: null, has_seen_death_reading: false, last_active_at: null };
+    try {
+      var p = JSON.parse(raw);
+      return { sessions_count: p.sessions_count || 0, first_seen_at: p.first_seen_at || null, has_seen_death_reading: !!p.has_seen_death_reading, last_active_at: p.last_active_at || null };
+    } catch (e) { return { sessions_count: 0, first_seen_at: null, has_seen_death_reading: false, last_active_at: null }; }
+  }
+  function saveImpression(imp) { storageSet(IMPRESSION_KEY, JSON.stringify(imp)); }
+
+  var record = freshRecord();
+  var impression = loadImpression();
+
+  function startNewSession() {
+    var now = Date.now();
+    var priorActive = impression.last_active_at;
+    if (impression.first_seen_at === null) impression.first_seen_at = now;
+    impression.sessions_count += 1;
+    record = freshRecord();
+    record.epoch_drift = (priorActive !== null) && ((now - priorActive) > DEMO_EPOCH_DRIFT_MS);
+    impression.last_active_at = now;
+    saveImpression(impression);
+    // The button's disabled attribute is DOM state, not record state:
+    // freshRecord() resets recalibrated_used, but without this the
+    // button stays disabled forever after first use, contradicting
+    // the legend's "once per session" (found by adversarial replay).
+    var recalBtn = document.getElementById("recalibrate-btn");
+    if (recalBtn) recalBtn.disabled = false;
+    renderCode();
+    showLine(MYSTERY_TEXT, retroactiveOrUnresolved(record));
+  }
+  function touchLastActive() { impression.last_active_at = Date.now(); saveImpression(impression); }
+
+  /* =================================================================
+   * Rendering: exactly one output line at a time.
+   * =============================================================== */
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function renderCode() {
+    document.getElementById("code").textContent =
+      originGlyph(depthOf(record)) + " " + obstacleGlyph(record.coherence) + " " + outcomeGlyph(record.last_in_room);
+    document.querySelector(".device").classList.toggle("strained", record.coherence <= 50);
+  }
+  // status: an epistemic status (content line) or a bare verdict word (no glyph).
+  function showLine(text, status) {
+    var el = document.getElementById("output");
+    if (status && STATUS_GLYPH[status]) {
+      var flicker = (status === "RETROACTIVE" && !record.retroactive_flicker_locked) ? " flicker" : "";
+      el.innerHTML = '<span class="gl-' + status + flicker + '">' + STATUS_GLYPH[status] + " " + escapeHtml(text) + "</span>";
+    } else {
+      el.textContent = text;
+    }
+    renderCode();
+  }
+  function spinGear(n) {
+    var gear = document.getElementById("gear");
+    gear.classList.remove("spinning");
+    gear.style.animationDuration = "0s";
+    void gear.offsetWidth;
+    gear.style.setProperty("--gear-turns", String(gearTurns(n)));
+    gear.style.animationDuration = gearDurationSeconds(n) + "s";
+    gear.classList.add("spinning");
+  }
+  function applyDelta(verdict) {
+    var d = COHERENCE_DELTA[verdict] || 0;
+    record.coherence = Math.max(0, Math.min(100, record.coherence + d));
+  }
+
+  /* =================================================================
+   * The single consultation channel. Everything the player can do
+   * goes through here: examine, claim, ask, recall. No separate modes.
+   * =============================================================== */
+  function consult(raw) {
+    var concepts = extractConcepts(raw);
+    var mentionsPosition = concepts.indexOf("entered") !== -1 || concepts.indexOf("left") !== -1 ||
+      concepts.indexOf("last") !== -1 || concepts.indexOf("here") !== -1;
+    var namesSuspect = concepts.indexOf("physician") !== -1 || concepts.indexOf("visitor") !== -1;
+    var namesBothSuspects = concepts.indexOf("physician") !== -1 && concepts.indexOf("visitor") !== -1;
+    var isNegated = concepts.indexOf("negation") !== -1;
+    // A question is never a claim: the record does not let asking
+    // (even "so who was it, X or Y?") commit it. Checked two ways
+    // because the 48-char cap truncates from the end, so a long
+    // question can lose its own trailing "?" right when this guard
+    // matters most (found by an adversarial pass); a leading
+    // interrogative word survives truncation instead.
+    var rawText = String(raw || "");
+    var isQuestion = /\?\s*$/.test(rawText) ||
+      /^\s*(who|what|do you|does|is|are|so who|can you|i wonder)\b/i.test(rawText);
+
+    // A claim naming a suspect and a position: this is what forces the
+    // record to decide who was last in the room, the first time it
+    // happens. Later assertions just test against what was decided.
+    // A claim made before asking about anything (askedCount < 2, the
+    // same threshold the memory fragment uses) is refused outright:
+    // the record won't commit on a blind guess, so accusing first and
+    // looking later stops being the winning move. Naming both suspects
+    // or negating the claim ("was NOT here") has no supported
+    // template (the parser is a dictionary, not NLU, and silently
+    // picking a suspect or silently inverting a denial is worse than
+    // an honest CANNOT) so both fall through to it instead of ever
+    // reaching the collapse logic below.
+    if (namesSuspect && mentionsPosition && !isQuestion && !namesBothSuspects && !isNegated) {
+      var wasUnresolved = record.last_in_room === "unresolved";
+      if (wasUnresolved && askedCount(record) < 2) {
+        return { line: "REDACTED. NOT ENOUGH IS ESTABLISHED YET.", verdict: "REDACTED" };
+      }
+      var claim = concepts.indexOf("physician") !== -1 ? "physician" : "visitor";
+      if (wasUnresolved) { record.last_in_room = collapseLastInRoom(record); record.just_collapsed = true; }
+      var matches = claim === record.last_in_room;
+      return { line: matches ? (wasUnresolved ? "SUSTAINED." : "STIPULATED.") : "OVERRULED.", verdict: matches ? (wasUnresolved ? "SUSTAINED" : "STIPULATED") : "OVERRULED" };
+    }
+    if (concepts.indexOf("nobody") !== -1) {
+      return { line: "OVERRULED.", verdict: "OVERRULED" }; // two cups on the table say otherwise
+    }
+    // A position word with no named suspect: not a claim, a recall of
+    // the mystery itself. Same words as before; only the glyph can
+    // have changed, if something since decided who it was.
+    if (mentionsPosition) {
+      return { line: MYSTERY_TEXT, status: retroactiveOrUnresolved(record) };
+    }
+    if (concepts.indexOf("physician") !== -1 && concepts.indexOf("lied") !== -1) {
+      if (record.trust_physician === null) {
+        var full = record.window_examined && record.moth_examined && record.inscription_stage > 0;
+        record.trust_physician = !full;
+        return full
+          ? { line: "SUSTAINED.", verdict: "SUSTAINED" }
+          : { line: "OVERRULED. THE INSCRIPTION WAS NEVER READ.", verdict: "OVERRULED" };
+      }
+      var ok = record.trust_physician === false;
+      return { line: ok ? "STIPULATED." : "OVERRULED.", verdict: ok ? "STIPULATED" : "OVERRULED" };
+    }
+    if (concepts.indexOf("physician") !== -1) {
+      var pl = PHYSICIAN_LINES[Math.min(record.physician_stage, PHYSICIAN_LINES.length - 1)];
+      if (record.physician_stage >= PHYSICIAN_LINES.length && impression.has_seen_death_reading) pl = PHYSICIAN_DEATH_LINE;
+      record.physician_stage = Math.min(record.physician_stage + 1, PHYSICIAN_LINES.length);
+      return { line: pl.text, status: pl.status };
+    }
+    if (concepts.indexOf("visitor") !== -1) {
+      return { line: "REDACTED.", verdict: "REDACTED" }; // real, but nothing here reveals them directly
+    }
+    if (concepts.indexOf("table") !== -1) {
+      record.table_examined = true;
+      return { line: TABLE_LINE.text, status: TABLE_LINE.status };
+    }
+    if (concepts.indexOf("window") !== -1) {
+      record.window_examined = true;
+      return { line: WINDOW_LINE.text, status: WINDOW_LINE.status };
+    }
+    if (concepts.indexOf("moth") !== -1) {
+      record.moth_examined = true;
+      var m = record.epoch_drift ? MOTH_LINE_DRIFT : MOTH_LINE;
+      return { line: m.text, status: m.status };
+    }
+    if (concepts.indexOf("inscription") !== -1) {
+      var il = INSCRIPTION_LINES[Math.min(record.inscription_stage, INSCRIPTION_LINES.length - 1)];
+      record.inscription_stage = Math.min(record.inscription_stage + 1, INSCRIPTION_LINES.length);
+      return { line: il.text, status: il.status };
+    }
+    if (record.nudge_index < NUDGE_LINES.length) {
+      var nudge = NUDGE_LINES[record.nudge_index];
+      record.nudge_index += 1;
+      return { line: nudge, verdict: null };
+    }
+    return { line: "CANNOT BE ESTABLISHED.", verdict: "CANNOT" };
+  }
+
+  function handleSubmit(raw) {
+    var beforeCount = askedCount(record);
+    var wasResolvedBefore = record.last_in_room !== "unresolved";
+    record.just_collapsed = false;
+    var result = consult(raw);
+    if (result.verdict) applyDelta(result.verdict);
+    var afterCount = askedCount(record);
+    // The machine volunteers this once, unprompted, the moment two
+    // things have been asked about: it is not what you asked for.
+    if (!record.memory_surfaced && beforeCount < 2 && afterCount >= 2) {
+      record.memory_surfaced = true;
+      showLine(MEMORY_TEXT, retroactiveOrUnresolved(record));
+    } else if (!record.followup_surfaced && wasResolvedBefore && !record.just_collapsed && result.line !== MYSTERY_TEXT) {
+      // The mystery was already resolved entering this turn (so this
+      // isn't the turn that resolved it, that verdict needs to be
+      // seen clean) and this isn't a recall of the mystery itself
+      // (the retroactive glyph flip there is the whole point and
+      // must never be preempted): open the one further thread
+      // instead of going quiet now that the room's question is answered.
+      record.followup_surfaced = true;
+      showLine(FOLLOWUP_TEXT, "UNRESOLVED");
+    } else if (result.status) {
+      showLine(result.line, result.status);
+    } else {
+      showLine(result.line, null);
+    }
+    var concepts = extractConcepts(raw);
+    spinGear(concepts.length);
+  }
+
+  /* =================================================================
+   * Wiring
+   * =============================================================== */
+  function init() {
+    startNewSession();
+
+    var input = document.getElementById("consult-input");
+    var count = document.getElementById("charcount");
+    input.addEventListener("input", function () { count.textContent = input.value.length + "/" + INPUT_MAXLEN; });
+
+    document.getElementById("consult-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var raw = input.value.trim();
+      if (!raw) return;
+      record.action_log.push(Date.now());
+      touchLastActive();
+      handleSubmit(raw);
+      input.value = "";
+      count.textContent = "0/" + INPUT_MAXLEN;
+    });
+
+    document.getElementById("new-session-btn").addEventListener("click", startNewSession);
+
+    document.getElementById("recalibrate-btn").addEventListener("click", function () {
+      if (record.recalibrated_used) return;
+      record.coherence = 100;
+      record.recalibrated_used = true;
+      record.retroactive_flicker_locked = true;
+      touchLastActive();
+      renderCode();
+      document.getElementById("recalibrate-btn").disabled = true;
+    });
+
+    document.getElementById("legend-btn").addEventListener("click", function () {
+      var panel = document.getElementById("legend");
+      var btn = document.getElementById("legend-btn");
+      var open = panel.hasAttribute("hidden");
+      if (open) panel.removeAttribute("hidden"); else panel.setAttribute("hidden", "");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+</body>
+</html>
